@@ -4,6 +4,8 @@ import logging
 import threading
 import os
 import time
+import importlib
+import json
 try:
     import queue
     from urllib.request import urlopen
@@ -240,21 +242,15 @@ def download_hgt_zip_files(working_dir, data, concurrency, skip=False):
     logging.debug('Download end')
 
 
-# Small dataset for testing
-data = {
-    "N00E006.hgt": {
-        "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E006.hgt.zip",
-        "zip": "N00E006.hgt.zip"
-    },
-    "N00E009.hgt": {
-        "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E009.hgt.zip",
-        "zip": "N00E009.hgt.zip"
-    },
-    "N00E010.hgt": {
-        "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E010.hgt.zip",
-        "zip": "N00E010.hgt.zip"
-    }
-}
+def load_dataset(dataset):
+    if not os.path.isfile(dataset):
+        dataset = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'datasets', '%s.json' % dataset)
+    if not os.path.isfile(dataset):
+        raise Exception('Invalid dataset %s' % dataset)
+
+    with open(dataset) as dataset_file:
+        data = json.load(dataset_file)
+    return data
 
 
 def run(*args, **kw):
@@ -263,7 +259,7 @@ def run(*args, **kw):
     skip_unzip = False
     clean_on_exit = True
 
-    dataset = 'srtm3'
+    dataset = 'small'
     concurrency = 2
     working_dir = tempfile.mkdtemp('', 'hgt2sql_')
 
@@ -286,12 +282,15 @@ def run(*args, **kw):
     logging.info('config - working directory : %s' % working_dir)
 
     try:
-        download_hgt_zip_files(working_dir, data, concurrency,
+        data = load_dataset(dataset)
+        download_hgt_zip_files(working_dir, data['files'], concurrency,
                                skip=skip_download)
     except (KeyboardInterrupt, ThreadPoolException):
         # in case of ThreadPoolException, the worker which raised the error
         # logs it using logging.exception
         pass
+    except Exception as exception:
+        logging.exception(exception)
 
     # Clean on exit
     if clean_on_exit:

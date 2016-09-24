@@ -89,4 +89,4 @@ ENV/
 .ropeproject
 
 # Tools export srtm
-*.json
+tools/*.json

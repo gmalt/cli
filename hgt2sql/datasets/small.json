@@ -1,0 +1,16 @@
+{
+  "files": {
+      "N00E006.hgt": {
+          "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E006.hgt.zip",
+          "zip": "N00E006.hgt.zip"
+      },
+      "N00E009.hgt": {
+          "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E009.hgt.zip",
+          "zip": "N00E009.hgt.zip"
+      },
+      "N00E010.hgt": {
+          "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E010.hgt.zip",
+          "zip": "N00E010.hgt.zip"
+      }
+  }
+}
