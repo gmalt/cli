@@ -31,4 +31,8 @@ setup(
         "Topic :: Scientific/Engineering :: GIS",
         "Topic :: Utilities",
     ],
+    entry_points='''
+        [console_scripts]
+        hgt2sql = hgt2sql.app:run
+    '''
 )
