@@ -6,6 +6,9 @@ import os
 import time
 import importlib
 import json
+import sys
+import glob
+import zipfile
 try:
     import queue
     from urllib.request import urlopen
@@ -30,6 +33,7 @@ class SafeCounter(object):
         """ Increment the counter """
         with self.lock:
             self.counter += self.incr
+            return str(self)
 
     def get(self):
         """ Get the counter current value """
@@ -44,6 +48,7 @@ class ThreadPoolException(Exception):
     thread has raised an exception
     """
     pass
+
 
 class ThreadPool(object):
     """ Create a pool of Thread which subscribe to a queue and process its item
@@ -159,20 +164,22 @@ class Worker(threading.Thread):
         """
         try:
             queue_item = self.queue.get()
-            self.counter.increment()
+            counter_info = self.counter.increment()
 
-            self.process(queue_item)
+            self.process(queue_item, counter_info)
 
             self.queue.task_done()
-        except Exception:
-            self._log_debug('exception raised', None, exc_info=True)
+        except Exception as exception:
+            logging.exception(exception)
+            self._log_debug('exception raised')
             self.stop_event.set()
 
-    def process(self, queue_item):
+    def process(self, queue_item, counter_info):
         """ Method called by `_get_queue` to process a queue_item.
         Implement it in child class
 
         :param queue_item: an item popped from the queue
+        :param str counter_info: information on the counter state
         """
         raise Exception('process method not implemented in child worker')
 
@@ -180,20 +187,15 @@ class Worker(threading.Thread):
         """ Executed when the worker ends """
         pass
 
-    def _log_debug(self, message, params=None, exc_info=False):
-        """ Helper method to log debug message or exception. It adds a prefix with the name
-        of the class and the id of the thread
+    def _log_debug(self, message, params=None):
+        """ Helper method to log debug message or exception. It adds a
+        prefix with the name of the class and the id of the thread
 
         :param str message: the message to print
         :param tuple params: the params to format the `message`
-        :param bool exc_info: if True, calls :func:`logging.exception` in
-            place of :func:`logging.debug`
         """
         message = message % params if params else message
-        if exc_info:
-            logging.exception('%s %d %s' % (self.__class__.__name__, self.id, message))
-        else:
-            logging.debug('%s %d %s' % (self.__class__.__name__, self.id, message))
+        logging.debug('%s %d %s' % (self.__class__.__name__, self.id, message))
 
 
 class DownloadWorker(Worker):
@@ -203,9 +205,9 @@ class DownloadWorker(Worker):
         super(DownloadWorker, self).__init__(id_, queue, counter, stop_event)
         self.folder = folder
 
-    def process(self, queue_item):
+    def process(self, queue_item, counter_info):
         self._log_debug('downloading %s', (queue_item['url'],))
-        logging.info('Downloading file %s' % self.counter)
+        logging.info('Downloading file %s' % counter_info)
         self._download_file(queue_item['url'], queue_item['zip'])
 
     def _download_file(self, url, filename):
@@ -222,6 +224,28 @@ class DownloadWorker(Worker):
                     output.write(data)
                 else:
                     break
+
+
+class ExtractWorker(Worker):
+    """ Worker in charge of extracting zip file found in `folder` """
+
+    def __init__(self, id_, queue, counter, stop_event, folder):
+        super(ExtractWorker, self).__init__(id_, queue, counter, stop_event)
+        self.folder = folder
+
+    def process(self, queue_item, counter_info):
+        self._log_debug('extracting %s', (queue_item,))
+        logging.info('Extracting file %s' % counter_info)
+        self._extract_file(queue_item)
+
+    def _extract_file(self, filename):
+        """ Extract a zip file in `folder`
+
+        :param str filename: the name of the file to extract
+        """
+        with zipfile.ZipFile(filename) as zip_fd:
+            for name in zip_fd.namelist():
+                zip_fd.extract(name, self.folder)
 
 
 def download_hgt_zip_files(working_dir, data, concurrency, skip=False):
@@ -242,6 +266,23 @@ def download_hgt_zip_files(working_dir, data, concurrency, skip=False):
     logging.debug('Download end')
 
 
+def extract_hgt_zip_files(working_dir, concurrency, skip=False):
+    """ Extract the HGT zip files in working_dir
+
+    :param str working_dir: folder where the zip files are
+    :param int concurrency: number of worker to start
+    :param bool skip: if True skip this step
+    """
+    if skip:
+        return
+
+    logging.debug('Extract start')
+    extract_task = ThreadPool(ExtractWorker, concurrency, working_dir)
+    extract_task.fill([os.path.realpath(filename) for filename in glob.glob(os.path.join(working_dir, "*.zip"))])
+    extract_task.start()
+    logging.debug('Extract end')
+
+
 def load_dataset(dataset):
     if not os.path.isfile(dataset):
         dataset = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'datasets', '%s.json' % dataset)
@@ -255,13 +296,14 @@ def load_dataset(dataset):
 
 def run(*args, **kw):
     # These params will be parsed from args in the future
-    skip_download = False
+    skip_download = True
     skip_unzip = False
-    clean_on_exit = True
+    clean_on_exit = False
 
     dataset = 'small'
     concurrency = 2
-    working_dir = tempfile.mkdtemp('', 'hgt2sql_')
+    #working_dir = tempfile.mkdtemp('', 'hgt2sql_')
+    working_dir = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'tmp'))
 
     verbose_level = logging.DEBUG
 
@@ -285,6 +327,7 @@ def run(*args, **kw):
         data = load_dataset(dataset)
         download_hgt_zip_files(working_dir, data['files'], concurrency,
                                skip=skip_download)
+        extract_hgt_zip_files(working_dir, concurrency, skip=skip_unzip)
     except (KeyboardInterrupt, ThreadPoolException):
         # in case of ThreadPoolException, the worker which raised the error
         # logs it using logging.exception

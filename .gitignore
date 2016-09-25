@@ -90,3 +90,6 @@ ENV/
 
 # Tools export srtm
 tools/*.json
+
+# tmp working dir
+tmp
