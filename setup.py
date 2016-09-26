@@ -33,6 +33,6 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        hgt2sql = hgt2sql.app:run
+        hgt2sql = hgt2sql:run
     '''
 )
