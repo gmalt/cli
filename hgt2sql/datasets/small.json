@@ -1,4 +1,5 @@
 {
+  "sampling": 1201,
   "files": {
       "N00E006.hgt": {
           "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E006.hgt.zip",

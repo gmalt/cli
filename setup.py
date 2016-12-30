@@ -33,6 +33,7 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        hgt2sql = hgt2sql:run
+        gmalt-hgt2sql = hgt2sql:run
+        gmalt-hgtread = hgt2sql.app:read_from_hgt
     '''
 )
