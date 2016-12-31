@@ -15,16 +15,18 @@ class HgtParser(object):
     :param int sample_lat: the number of values on the latitude axis
     :param int sample_lng: the number of values on the latitude axis
     """
+
     def __init__(self, filepath, sample_lat=1201, sample_lng=1201):
         self.file = None
         self.filepath = filepath
+        self.filename = os.path.basename(filepath)
 
         self.sample_lat = sample_lat
         self.sample_lng = sample_lng
 
-        self.filename = os.path.basename(filepath)
         self.bottom_left_center = self._get_bottom_left_center(self.filename)
         self.corners = self._get_corners_from_filename(self.bottom_left_center)
+        self.top_left_square = self._get_top_left_square()
 
     def __enter__(self):
         if not os.path.exists(self.filepath):
@@ -36,6 +38,58 @@ class HgtParser(object):
         if self.file:
             self.file.close()
             self.file = None
+
+    def __iter__(self):
+        """ Iterate over all the elevation values in the file
+
+        :return: tuple with (line number, column number, zero based index, square corners of the elevation value,
+        elevation value)
+        :rtype: (int, int, int, ((float, float), (float, float), (float, float), (float, float)), int)
+        """
+        idx = 0
+        while idx < self.sample_lat * self.sample_lng:
+            line = idx / self.sample_lng
+            col = idx % self.sample_lng
+            square = self._shift_first_square(line, col)
+            yield line + 1, col + 1, idx, square, self._get_value(idx)
+            idx += 1
+        raise StopIteration
+
+    def _get_top_left_square(self):
+        """ Get the corners of the top left square in the HGT file
+
+         .. note:: useful when iterating over all the values
+
+        :return: tuple of 4 position tuples (bottom left, top left, top right, bottom right) with (lat, lng) for each
+        position as float
+        :rtype: ((float, float), (float, float), (float, float), (float, float))
+        """
+        return (
+            (self.corners[1][0] - self.square_height, self.corners[1][1]),
+            self.corners[1],
+            (self.corners[1][0], self.corners[1][1] + self.square_width),
+            (self.corners[1][0] - self.square_height, self.corners[1][1] + self.square_width)
+        )
+
+    def _shift_first_square(self, line, col):
+        """ Shift the top left square by the provided number of lines and columns
+
+        :param int line: line number (from 0 to sample_lat - 1)
+        :param int col: column number (from 0 to sample_lng - 1)
+        :return: tuple of 4 position tuples (bottom left, top left, top right, bottom right) with (lat, lng) for each
+        position as float
+        :rtype: ((float, float), (float, float), (float, float), (float, float))
+        """
+        return (
+            (self.top_left_square[0][0] - line * self.square_height,
+             self.top_left_square[0][1] + col * self.square_width),
+            (self.top_left_square[1][0] - line * self.square_height,
+             self.top_left_square[1][1] + col * self.square_width),
+            (self.top_left_square[2][0] - line * self.square_height,
+             self.top_left_square[2][1] + col * self.square_width),
+            (self.top_left_square[3][0] - line * self.square_height,
+             self.top_left_square[3][1] + col * self.square_width),
+        )
 
     @property
     def square_width(self):
@@ -129,14 +183,15 @@ class HgtParser(object):
         """ Get the elevation value at the provided index
 
         :param int idx: index of the value
-        :return: the elevation value
+        :return: the elevation value or None if no value at this index (instead of -32768)
         :rtype: int
         """
         self.file.seek(0)
         self.file.seek(idx * 2)
         buf = self.file.read(2)
-        val = struct.unpack('>h', buf)
-        return val[0]
+        val, = struct.unpack('>h', buf)
+
+        return val if not val == -32768 else None
 
     def _get_idx_in_file(self, pos):
         """ From a position (lat, lng) as float. Get the index of the elevation value inside the HGT file
@@ -156,6 +211,7 @@ class HgtParser(object):
         :param tuple pos: (lat, lng) of the position
         :return: tuple (index on the latitude from the top, index on the longitude from the left, elevation in meters)
         :rtype: (int, int, int)
+        :raises Exception: if the point could not be found in the parsed HGT file
         """
         if not self.is_inside(pos):
             raise Exception('point {} is not inside HGT file {}'.format(pos, self.filename))
