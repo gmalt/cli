@@ -39,21 +39,11 @@ class HgtParser(object):
             self.file.close()
             self.file = None
 
-    def __iter__(self):
-        """ Iterate over all the elevation values in the file
+    def get_value_iterator(self):
+        return HgtValueIterator(self)
 
-        :return: tuple with (line number, column number, zero based index, square corners of the elevation value,
-        elevation value)
-        :rtype: (int, int, int, ((float, float), (float, float), (float, float), (float, float)), int)
-        """
-        idx = 0
-        while idx < self.sample_lat * self.sample_lng:
-            line = idx / self.sample_lng
-            col = idx % self.sample_lng
-            square = self._shift_first_square(line, col)
-            yield line + 1, col + 1, idx, square, self._get_value(idx)
-            idx += 1
-        raise StopIteration
+    def get_sample_iterator(self, width, height):
+        return HgtSampleIterator(self, width, height)
 
     def _get_top_left_square(self):
         """ Get the corners of the top left square in the HGT file
@@ -71,7 +61,7 @@ class HgtParser(object):
             (self.corners[1][0] - self.square_height, self.corners[1][1] + self.square_width)
         )
 
-    def _shift_first_square(self, line, col):
+    def shift_first_square(self, line, col):
         """ Shift the top left square by the provided number of lines and columns
 
         :param int line: line number (from 0 to sample_lat - 1)
@@ -80,16 +70,10 @@ class HgtParser(object):
         position as float
         :rtype: ((float, float), (float, float), (float, float), (float, float))
         """
-        return (
-            (self.top_left_square[0][0] - line * self.square_height,
-             self.top_left_square[0][1] + col * self.square_width),
-            (self.top_left_square[1][0] - line * self.square_height,
-             self.top_left_square[1][1] + col * self.square_width),
-            (self.top_left_square[2][0] - line * self.square_height,
-             self.top_left_square[2][1] + col * self.square_width),
-            (self.top_left_square[3][0] - line * self.square_height,
-             self.top_left_square[3][1] + col * self.square_width),
-        )
+        shifted = ()
+        for corner in self.top_left_square:
+            shifted += ((corner[0] - line * self.square_height, corner[1] + col * self.square_width),)
+        return shifted
 
     @property
     def square_width(self):
@@ -179,7 +163,17 @@ class HgtParser(object):
             and point[0] < self.corners[2][0] \
             and point[1] < self.corners[2][1]
 
-    def _get_value(self, idx):
+    def get_idx(self, col, line):
+        """ Calculate the index of the value based on the column and line numbers of the value
+
+        :param int col: the column number (zero based)
+        :param int line: the line number (zero based)
+        :return: the index of the value
+        :rtype: int
+        """
+        return line * self.sample_lng + col
+
+    def get_value(self, idx):
         """ Get the elevation value at the provided index
 
         :param int idx: index of the value
@@ -193,7 +187,7 @@ class HgtParser(object):
 
         return val if not val == -32768 else None
 
-    def _get_idx_in_file(self, pos):
+    def get_idx_in_file(self, pos):
         """ From a position (lat, lng) as float. Get the index of the elevation value inside the HGT file
 
         :param tuple pos: (lat, lng) of the position
@@ -216,6 +210,78 @@ class HgtParser(object):
         if not self.is_inside(pos):
             raise Exception('point {} is not inside HGT file {}'.format(pos, self.filename))
 
-        lat_idx, lng_idx, idx = self._get_idx_in_file(pos)
+        lat_idx, lng_idx, idx = self.get_idx_in_file(pos)
 
-        return lat_idx, lng_idx, self._get_value(idx)
+        return lat_idx, lng_idx, self.get_value(idx)
+
+
+class HgtValueIterator(object):
+    """ Iterator over all the elevation values in the file
+
+    :param parser: a HgtParser instance
+    :type parser: @TODO
+    :return: tuple with (line number, column number, zero based index, square corners of the elevation value,
+    elevation value)
+    :rtype: (int, int, int, ((float, float), (float, float), (float, float), (float, float)), int)
+    """
+    def __init__(self, parser):
+        self.parser = parser
+
+    def __iter__(self):
+        idx = 0
+        while idx < self.parser.sample_lat * self.parser.sample_lng:
+            line = idx / self.parser.sample_lng
+            col = idx % self.parser.sample_lng
+            square = self.parser.shift_first_square(line, col)
+            yield line + 1, col + 1, idx, square, self.parser.get_value(idx)
+            idx += 1
+        raise StopIteration
+
+
+class HgtSampleIterator(object):
+    """ Iterator over samples. For example 50x50 values per 50x50
+
+    :param parser: a HgtParser instance
+    :type parser: @TODO
+    :param int width: width of the sample area
+    :param int height: height of the sample area
+    """
+    def __init__(self, parser, width, height):
+        self.parser = parser
+        self.width = width
+        self.height = height
+
+    def __iter__(self):
+        for top_left_line_idx in range(0, self.parser.sample_lat, self.height):
+            for top_left_col_idx in range(0, self.parser.sample_lng, self.width):
+                yield self._get_square_values(top_left_col_idx, top_left_line_idx)
+        raise StopIteration
+
+    def _get_square_values(self, top_left_col_idx, top_left_line_idx):
+        """ Get all the elevation values in the requested square knowing
+        its top left corner line and column numbers
+
+        :param int top_left_col_idx: column number of the top left corner of the requested square
+        :param int top_left_line_idx: line number of the top left corner of the requested square
+        :return: list of list of elevation values (grouped per line)
+        :rtype: list[list[int]]
+        """
+        square_values = []
+        for idx in range(top_left_line_idx, min(self.parser.sample_lat, top_left_line_idx + self.height)):
+            square_values.append(self._read_line(top_left_col_idx, idx))
+        return square_values
+
+    def _read_line(self, col_idx, line_idx):
+        """ Get a line of elevation values in the requested square knowing the starting
+        column number and the line number
+
+        :param int col_idx: the starting column number
+        :param int line_idx: the line number
+        :return: list of elevation values
+        :rtype: list[int]
+        """
+        line_values = []
+        for idx in range(col_idx, min(self.parser.sample_lng, col_idx + self.width)):
+            value_idx = self.parser.get_idx(idx, line_idx)
+            line_values.append(self.parser.get_value(value_idx))
+        return line_values
