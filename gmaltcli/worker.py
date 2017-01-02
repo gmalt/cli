@@ -35,7 +35,7 @@ class SafeCounter(object):
 
 
 class WorkerPoolException(Exception):
-    """ Exception raised by :class:`hgt2sql.worker.WorkerPool` when one of its
+    """ Exception raised by :class:`gmaltcli.worker.WorkerPool` when one of its
     thread has raised an exception
     """
     pass
@@ -49,7 +49,7 @@ class WorkerPool(object):
         params to the worker __init__ method
 
     :param class worker: The class of the Worker thread
-    :type worker: :class:`hgt2sql.worker.Worker`
+    :type worker: :class:`gmaltcli.worker.Worker`
     :param int size: number of worker to create in pool
     """
     def __init__(self, worker, size, *args, **kwargs):
@@ -88,7 +88,7 @@ class WorkerPool(object):
         .. note:: blocking call until the queue is empty or one of the thread
             raised an exception
 
-        :raises: :class:`hgt2sql.worker.WorkerPoolException` if one of the thread
+        :raises: :class:`gmaltcli.worker.WorkerPoolException` if one of the thread
             raised an exception
         """
         try:

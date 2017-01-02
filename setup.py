@@ -7,14 +7,14 @@ def read(fname):
 
 
 setup(
-    name = "hgt2sql",
-    version = read('VERSION'),
-    author = "Jonathan Bouzekri",
-    author_email = "jonathan.bouzekri@gmail.com",
-    description = ("Download, extract and import HGT data into a SQL database"),
-    license = "MIT",
-    keywords = "example documentation tutorial",
-    url = "http://github.com/gmalt/hgt2sql",
+    name="gmaltcli",
+    version=read('VERSION'),
+    author="Jonathan Bouzekri",
+    author_email="jonathan.bouzekri@gmail.com",
+    description="Download, extract and import HGT data into a SQL database",
+    license="MIT",
+    keywords="example documentation tutorial",
+    url="http://github.com/gmalt/gmaltcli",
     packages=find_packages(),
     long_description=read('README.md'),
     extras_require={
@@ -33,7 +33,7 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        gmalt-hgt2sql = hgt2sql:run
-        gmalt-hgtread = hgt2sql.app:read_from_hgt
+        gmalt-gmaltcli = gmaltcli:run
+        gmalt-hgtread = gmaltcli.app:read_from_hgt
     '''
 )

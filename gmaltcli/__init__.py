@@ -207,7 +207,7 @@ def run(*args, **kw):
 
     dataset = 'small'
     concurrency = 2
-    # working_dir = tempfile.mkdtemp('', 'hgt2sql_')
+    # working_dir = tempfile.mkdtemp('', 'gmaltcli_')
     working_dir = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'tmp'))
 
     verbose_level = logging.DEBUG

@@ -2,7 +2,7 @@ import logging
 import sys
 import argparse
 
-import hgt2sql.hgt as hgt
+import gmaltcli.hgt as hgt
 
 
 def read_from_hgt():
