@@ -17,8 +17,10 @@ setup(
     url="http://github.com/gmalt/gmaltcli",
     packages=find_packages(),
     long_description=read('README.md'),
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
     extras_require={
-        'tools': ['lxml'],
+        'tools': ['lxml']
     },
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
