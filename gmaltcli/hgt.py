@@ -119,9 +119,12 @@ class HgtParser(object):
         :param str filename: name of the HGT file
         :return: tuple (latitude of the center of the bottom left square, longitude of the bottom left square)
         :rtype: tuple of float
+        :raises Exception: if filename does not match an expected HGT file pattern
         """
         filename_regex = re.compile('^([NS])([0-9]+)([WE])([0-9]+).*')
         result = filename_regex.match(filename)
+        if not result:
+            raise Exception('file {} does not match expected HGT file pattern'.format(filename))
 
         lat_order, lat_left_bottom_center, lng_order, lng_left_bottom_center = result.groups()
 
