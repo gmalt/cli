@@ -70,6 +70,9 @@ class HgtParser(object):
         position as float
         :rtype: ((float, float), (float, float), (float, float), (float, float))
         """
+        if not 0 <= line < self.sample_lat or not 0 <= col < self.sample_lng:
+            raise Exception('Out of bound line or col')
+
         shifted = ()
         for corner in self.top_left_square:
             shifted += ((corner[0] - line * self.square_height, corner[1] + col * self.square_width),)
