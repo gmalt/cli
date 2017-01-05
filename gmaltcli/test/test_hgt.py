@@ -1,6 +1,9 @@
-import pytest
 import collections
+import struct
 
+import pytest
+
+from . import tools as test_tools
 import gmaltcli.hgt as hgt
 
 
@@ -110,3 +113,49 @@ def test_get_corners_from_filename(empty_hgt, srtm1_hgt):
         (-0.0001388888888888889, 11.000138888888888)
     )
     assert srtm1_hgt._get_corners_from_filename((0.0, 10.0)) == corners
+
+
+def test_is_inside(empty_hgt):
+    assert empty_hgt.is_inside((0.5, 10.5))
+    assert empty_hgt.is_inside((0.1, 10.9))
+
+    assert not empty_hgt.is_inside((1.5, 10.9))
+    assert not empty_hgt.is_inside((0.5, 9.8))
+
+
+def test_get_idx(empty_hgt, srtm1_hgt):
+    assert empty_hgt.get_idx(5, 1200) == 1441205
+    assert empty_hgt.get_idx(1200, 5) == 7205
+
+    with pytest.raises(Exception) as e:
+        assert empty_hgt.get_idx(-5, 1200)
+    assert str(e.value) == "Out of bound line or col"
+    with pytest.raises(Exception) as e:
+        assert empty_hgt.get_idx(5, 1201)
+    assert str(e.value) == "Out of bound line or col"
+
+    assert srtm1_hgt.get_idx(5, 1200) == 4321205
+    assert srtm1_hgt.get_idx(1200, 5) == 19205
+
+
+def test_get_value(monkeypatch, empty_hgt):
+    opened_file = test_tools.MockOpenedFile(struct.pack('>h', 156))
+    monkeypatch.setattr(empty_hgt, 'file', opened_file)
+    alt_value = empty_hgt.get_value(7205)
+
+    assert opened_file.seek_values == [0, 14410]
+    assert opened_file.buf_values == [2]
+    assert alt_value == 156
+
+    opened_file.clean()
+    opened_file.value = struct.pack('>h', -32768)
+    alt_value = empty_hgt.get_value(7205)
+    assert alt_value is None
+
+
+def test_get_idx_in_file(empty_hgt):
+    with pytest.raises(Exception) as e:
+        empty_hgt.get_idx_in_file((3.0, 12))
+    assert str(e.value) == "point (3.0, 12) is not inside HGT file N00E010.hgt"
+
+    assert empty_hgt.get_idx_in_file((0.56, 10.86)) == (528, 1032, 635160)

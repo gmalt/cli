@@ -176,7 +176,11 @@ class HgtParser(object):
         :param int line: the line number (zero based)
         :return: the index of the value
         :rtype: int
+        :raises Exception: if the col and line are outside the file
         """
+        if not 0 <= line < self.sample_lat or not 0 <= col < self.sample_lng:
+            raise Exception('Out of bound line or col')
+
         return line * self.sample_lng + col
 
     def get_value(self, idx):
@@ -199,7 +203,11 @@ class HgtParser(object):
         :param tuple pos: (lat, lng) of the position
         :return: tuple (index on the latitude from the top, index on the longitude from the left, index in the file)
         :rtype: (int, int, int)
+        :raises Exception: if the point could not be found in the parsed HGT file
         """
+        if not self.is_inside(pos):
+            raise Exception('point {} is not inside HGT file {}'.format(pos, self.filename))
+
         lat_idx = 1200 - int(round((pos[0] - self.bottom_left_center[0]) / self.square_height))
         lng_idx = int(round((pos[1] - self.bottom_left_center[1]) / self.square_width))
         idx = lat_idx * 1201 + lng_idx
@@ -213,9 +221,6 @@ class HgtParser(object):
         :rtype: (int, int, int)
         :raises Exception: if the point could not be found in the parsed HGT file
         """
-        if not self.is_inside(pos):
-            raise Exception('point {} is not inside HGT file {}'.format(pos, self.filename))
-
         lat_idx, lng_idx, idx = self.get_idx_in_file(pos)
 
         return lat_idx, lng_idx, self.get_value(idx)
