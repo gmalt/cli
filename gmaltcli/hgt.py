@@ -241,8 +241,7 @@ class HgtValueIterator(object):
     def __iter__(self):
         idx = 0
         while idx < self.parser.sample_lat * self.parser.sample_lng:
-            line = idx / self.parser.sample_lng
-            col = idx % self.parser.sample_lng
+            line, col = divmod(idx, self.parser.sample_lng)
             square = self.parser.shift_first_square(line, col)
             yield line + 1, col + 1, idx, square, self.parser.get_value(idx)
             idx += 1
