@@ -48,5 +48,3 @@ def read_from_hgt():
     sys.stdout.write('    Location: ({}P,{}L)\n'.format(elev_data[1], elev_data[0]))
     sys.stdout.write('    Band 1:\n')
     sys.stdout.write('        Value: {}\n'.format(elev_data[2]))
-
-

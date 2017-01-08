@@ -18,7 +18,7 @@ setup(
     packages=find_packages(),
     long_description=read('README.md'),
     setup_requires=['pytest-runner'],
-    tests_require=['pytest'],
+    tests_require=['pytest', 'flake8'],
     extras_require={
         'tools': ['lxml']
     },
