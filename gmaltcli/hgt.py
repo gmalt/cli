@@ -230,7 +230,7 @@ class HgtValueIterator(object):
     """ Iterator over all the elevation values in the file
 
     :param parser: a HgtParser instance
-    :type parser: @TODO
+    :type parser: :class:`gmaltcli.hgt.HgtParser`
     :return: tuple with (line number, column number, zero based index, square corners of the elevation value,
     elevation value)
     :rtype: (int, int, int, ((float, float), (float, float), (float, float), (float, float)), int)
@@ -253,7 +253,7 @@ class HgtSampleIterator(object):
     """ Iterator over samples. For example 50x50 values per 50x50
 
     :param parser: a HgtParser instance
-    :type parser: @TODO
+    :type parser: :class:`gmaltcli.hgt.HgtParser`
     :param int width: width of the sample area
     :param int height: height of the sample area
     """
