@@ -37,5 +37,6 @@ setup(
         [console_scripts]
         gmalt-gmaltcli = gmaltcli:run
         gmalt-hgtread = gmaltcli.app:read_from_hgt
+        gmalt-hgtget = gmaltcli.app:get_hgt
     '''
 )

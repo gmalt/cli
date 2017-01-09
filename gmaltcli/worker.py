@@ -1,10 +1,19 @@
+import os
 import threading
 import logging
 import time
+import zipfile
+
 try:
     import queue
 except ImportError:
     import Queue as queue
+
+try:
+    from urllib.request import urlopen
+    from urllib.error import HTTPError
+except ImportError:
+    from urllib2 import urlopen, HTTPError
 
 
 class SafeCounter(object):
@@ -20,7 +29,6 @@ class SafeCounter(object):
 
     def increment(self):
         """ Increment the counter """
-        next_counter = None
         with self.lock:
             self.counter += self.incr
             next_counter = self.counter
@@ -58,6 +66,7 @@ class WorkerPool(object):
         self.stop_event = threading.Event()
         self.workers = []
         for i in range(size):
+            # noinspection PyCallingNonCallable
             self.workers.append(worker(i + 1, self.queue, self.counter,
                                        self.stop_event, *args, **kwargs))
 
@@ -124,11 +133,11 @@ class Worker(threading.Thread):
     :type stop_event: :class:`threading.Event`
     """
 
-    def __init__(self, id_, queue, counter, stop_event):
+    def __init__(self, id_, queue_obj, counter, stop_event):
         super(Worker, self).__init__()
         self.daemon = True
         self.id = id_
-        self.queue = queue
+        self.queue = queue_obj
         self.counter = counter
         self.stop_event = stop_event
 
@@ -188,3 +197,53 @@ class Worker(threading.Thread):
         """
         message = message % params if params else message
         logging.debug('%s %d %s' % (self.__class__.__name__, self.id, message))
+
+
+class DownloadWorker(Worker):
+    """ Worker in charge of downloading zip file into `folder` """
+
+    def __init__(self, id_, queue_obj, counter, stop_event, folder):
+        super(DownloadWorker, self).__init__(id_, queue_obj, counter, stop_event)
+        self.folder = folder
+
+    def process(self, queue_item, counter_info):
+        self._log_debug('downloading %s', (queue_item['url'],))
+        logging.info('Downloading file %d/%d' % counter_info)
+        self._download_file(queue_item['url'], queue_item['zip'])
+
+    def _download_file(self, url, filename):
+        """ Download a file and stores it in `folder`
+
+        :param str url: the url to download
+        :param str filename: the name of the file created
+        """
+        hgt_zip_file = urlopen(url)
+        with open(os.path.join(self.folder, filename), 'wb') as output:
+            while True:
+                data = hgt_zip_file.read(4096)
+                if data and not self.stop_event.is_set():
+                    output.write(data)
+                else:
+                    break
+
+
+class ExtractWorker(Worker):
+    """ Worker in charge of extracting zip file found in `folder` """
+
+    def __init__(self, id_, queue_obj, counter, stop_event, folder):
+        super(ExtractWorker, self).__init__(id_, queue_obj, counter, stop_event)
+        self.folder = folder
+
+    def process(self, queue_item, counter_info):
+        self._log_debug('extracting %s', (queue_item,))
+        logging.info('Extracting file %d/%d' % counter_info)
+        self._extract_file(queue_item)
+
+    def _extract_file(self, filename):
+        """ Extract a zip file in `folder`
+
+        :param str filename: the name of the file to extract
+        """
+        with zipfile.ZipFile(filename) as zip_fd:
+            for name in zip_fd.namelist():
+                zip_fd.extract(name, self.folder)
