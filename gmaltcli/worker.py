@@ -210,6 +210,7 @@ class DownloadWorker(Worker):
         self._log_debug('downloading %s', (queue_item['url'],))
         logging.info('Downloading file %d/%d' % counter_info)
         self._secured_download_file(queue_item['url'], queue_item['zip'])
+        self._log_debug('downloaded %s', (queue_item['url'],))
 
     def _secured_download_file(self, url, filename):
         """ Download a file and stores it in `folder`
@@ -254,6 +255,7 @@ class ExtractWorker(Worker):
         self._log_debug('extracting %s', (queue_item,))
         logging.info('Extracting file %d/%d' % counter_info)
         self._extract_file(queue_item)
+        self._log_debug('extracted %s', (queue_item,))
 
     def _extract_file(self, filename):
         """ Extract a zip file in `folder`

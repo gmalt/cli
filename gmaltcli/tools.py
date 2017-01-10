@@ -58,8 +58,10 @@ def download_hgt_zip_files(working_dir, data, concurrency, skip=False):
     :param bool skip: if True skip this step
     """
     if skip:
+        logging.debug('Download skipped')
         return
 
+    logging.info('Nb of files to download : {}'.format(len(data)))
     logging.debug('Download start')
     download_task = worker.WorkerPool(worker.DownloadWorker, concurrency, working_dir)
     download_task.fill(data)
@@ -75,10 +77,13 @@ def extract_hgt_zip_files(working_dir, concurrency, skip=False):
     :param bool skip: if True skip this step
     """
     if skip:
+        logging.debug('Extract skipped')
         return
 
+    zip_files = [os.path.realpath(filename) for filename in glob.glob(os.path.join(working_dir, "*.zip"))]
+    logging.info('Nb of files to extract : {}'.format(len(zip_files)))
     logging.debug('Extract start')
     extract_task = worker.WorkerPool(worker.ExtractWorker, concurrency, working_dir)
-    extract_task.fill([os.path.realpath(filename) for filename in glob.glob(os.path.join(working_dir, "*.zip"))])
+    extract_task.fill(zip_files)
     extract_task.start()
     logging.debug('Extract end')

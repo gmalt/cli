@@ -75,7 +75,7 @@ def create_get_hgt_parser():
                         help='Set this flag if you don\'t want to unzip the HGT zip files')
     parser.add_argument('-c', type=int, dest='concurrency', default=1,
                         help='How many worker will attempt to download or unzip files in parallel')
-    parser.add_argument('-v', dest='verbose', action='count', help='increase verbosity level')
+    parser.add_argument('-v', dest='verbose', action='store_true', help='increase verbosity level')
     return parser
 
 
@@ -90,13 +90,12 @@ def get_hgt():
     parser = create_get_hgt_parser()
     args = parser.parse_args()
 
-    #verbose_level = logging.INFO
-    #print(verbose_level)
-    #logging.getLogger('root').setLevel(1000)
+    verbose_level = logging.DEBUG if args.verbose else logging.INFO
+    logging.getLogger().setLevel(verbose_level)
 
-    logging.info('config - dataset : %s' % args.dataset)
+    logging.info('config - dataset file : %s' % args.dataset)
     logging.info('config - parallelism : %i' % args.concurrency)
-    logging.info('config - working directory : %s' % args.folder)
+    logging.info('config - folder : %s' % args.folder)
 
     try:
         # Download HGT zip file in a pool of thread
