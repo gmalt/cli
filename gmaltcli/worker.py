@@ -11,9 +11,9 @@ except ImportError:
 
 try:
     from urllib.request import urlopen
-    from urllib.error import HTTPError
+    from urllib.error import HTTPError, URLError
 except ImportError:
-    from urllib2 import urlopen, HTTPError
+    from urllib2 import urlopen, HTTPError, URLError
 
 
 class SafeCounter(object):
@@ -209,7 +209,23 @@ class DownloadWorker(Worker):
     def process(self, queue_item, counter_info):
         self._log_debug('downloading %s', (queue_item['url'],))
         logging.info('Downloading file %d/%d' % counter_info)
-        self._download_file(queue_item['url'], queue_item['zip'])
+        self._secured_download_file(queue_item['url'], queue_item['zip'])
+
+    def _secured_download_file(self, url, filename):
+        """ Download a file and stores it in `folder`
+
+        .. note:: the download is delegated to method :meth:`worker.DownloadWorker._download_file`.
+            This method is just a wrapper to catch exception from :mod:`urllib`
+
+        :param str url: the url to download
+        :param str filename: the name of the file created
+        """
+        try:
+            self._download_file(url, filename)
+        except URLError:
+            logging.error('Unable to download file {}. Verify your internet connection'.format(url))
+        except HTTPError:
+            logging.error('Unable to download file {}. Verify the link.'.format(url))
 
     def _download_file(self, url, filename):
         """ Download a file and stores it in `folder`

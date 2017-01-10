@@ -7,7 +7,6 @@ import sys
 import glob
 import struct
 
-
 from . import worker
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')

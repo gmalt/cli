@@ -7,6 +7,7 @@ import sys
 import argparse
 
 import gmaltcli.hgt as hgt
+import gmaltcli.tools as tools
 import gmaltcli.worker as worker
 
 
@@ -55,77 +56,26 @@ def read_from_hgt():
     sys.stdout.write('        Value: {}\n'.format(elev_data[2]))
 
 
-def download_hgt_zip_files(working_dir, data, concurrency, skip=False):
-    """ Download the HGT zip files from remote server
-
-    :param str working_dir: folder to put the downloaded files in
-    :param dict data: dataset of SRTM data
-    :param int concurrency: number of worker to start
-    :param bool skip: if True skip this step
-    """
-    if skip:
-        return
-
-    logging.debug('Download start')
-    download_task = worker.WorkerPool(worker.DownloadWorker, concurrency, working_dir)
-    download_task.fill(data)
-    download_task.start()
-    logging.debug('Download end')
-
-
-def extract_hgt_zip_files(working_dir, concurrency, skip=False):
-    """ Extract the HGT zip files in working_dir
-
-    :param str working_dir: folder where the zip files are
-    :param int concurrency: number of worker to start
-    :param bool skip: if True skip this step
-    """
-    if skip:
-        return
-
-    logging.debug('Extract start')
-    extract_task = worker.WorkerPool(worker.ExtractWorker, concurrency, working_dir)
-    extract_task.fill([os.path.realpath(filename) for filename in glob.glob(os.path.join(working_dir, "*.zip"))])
-    extract_task.start()
-    logging.debug('Extract end')
-
-
-def load_dataset(dataset):
-    """ Load a dataset from a json file
-
-    :param str dataset: can be the name of a json file in the `datasets` folder
-        or the path to a custom json file
-    :return: json load of the dataset file
-    :rtype: dict
-    """
-    if not os.path.isfile(dataset):
-        dataset = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'datasets', '%s.json' % dataset)
-    if not os.path.isfile(dataset):
-        raise Exception('Invalid dataset %s' % dataset)
-
-    with open(dataset) as dataset_file:
-        data = json.load(dataset_file)
-    return data
-
-
 def create_get_hgt_parser():
-    """ CLI parser for gmalt-hgtread
+    """ CLI parser for gmalt-hgtget
 
     :return: cli parser
     :rtype: :class:`argparse.ArgumentParser`
     """
     parser = argparse.ArgumentParser(description='Download and unzip HGT files from a remote source')
-    parser.add_argument('dataset', type=str, help='A dataset file provided by this package or the path to your own '
-                                                  'dataset file. Please read documentation to get dataset JSON format')
-    parser.add_argument('folder', type=str, help='Path to the folder where the HGT zip will be downloaded or where the '
-                                                 'HGT zip have already been downloaded.')
-    parser.add_argument('--skip-download', dest='skip_download', action='store_true', help='Set this flag if you don\'t'
-                                                                                           ' want to download the zip '
-                                                                                           'files.')
-    parser.add_argument('--skip-unzip', dest='skip_unzip', action='store_true', help='Set this flag if you don\'t want '
-                                                                                     'to unzip the HGT zip files')
-    parser.add_argument('-c', type=int, dest='concurrency', default=1, help='How many worker will attempt to download '
-                                                                            'or unzip files in parallel')
+    parser.add_argument('dataset', type=tools.dataset_file, action=tools.LoadDatasetAction,
+                        help='A dataset file provided by this package or the path to your own dataset file. Please '
+                             'read documentation to get dataset JSON format')
+    parser.add_argument('folder', type=tools.writable_folder,
+                        help='Path to the folder where the HGT zip will be downloaded or where the HGT zip have '
+                             'already been downloaded.')
+    parser.add_argument('--skip-download', dest='skip_download', action='store_true',
+                        help='Set this flag if you don\'t want to download the zip files.')
+    parser.add_argument('--skip-unzip', dest='skip_unzip', action='store_true',
+                        help='Set this flag if you don\'t want to unzip the HGT zip files')
+    parser.add_argument('-c', type=int, dest='concurrency', default=1,
+                        help='How many worker will attempt to download or unzip files in parallel')
+    parser.add_argument('-v', dest='verbose', action='count', help='increase verbosity level')
     return parser
 
 
@@ -136,49 +86,27 @@ def get_hgt():
 
         gmalt-hgtget [options] <dataset> <folder>
     """
+    # Parse command line arguments
     parser = create_get_hgt_parser()
     args = parser.parse_args()
-    print(args)
-    """
-    # These params will be parsed from args in the future
-    skip_download = True
-    skip_unzip = False
 
-    dataset = 'small'
-    concurrency = 2
-    # working_dir = tempfile.mkdtemp('', 'gmaltcli_')
-    working_dir = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'tmp'))
+    #verbose_level = logging.INFO
+    #print(verbose_level)
+    #logging.getLogger('root').setLevel(1000)
 
-    verbose_level = logging.DEBUG
-
-    logging.getLogger('root').setLevel(verbose_level)
-
-    # Do we really need this ?
-    if not os.path.isdir(working_dir):
-        logging.error('%s does not exist')
-        sys.exit(1)
-    if not os.access(working_dir, os.W_OK | os.X_OK):
-        logging.error('%s is not writable')
-        sys.exit(1)
-
-    logging.info('config - dataset : %s' % dataset)
-    logging.info('config - parallelism : %i' % concurrency)
-    logging.info('config - working directory : %s' % working_dir)
+    logging.info('config - dataset : %s' % args.dataset)
+    logging.info('config - parallelism : %i' % args.concurrency)
+    logging.info('config - working directory : %s' % args.folder)
 
     try:
-        data = load_dataset(dataset)
-        download_hgt_zip_files(working_dir, data['files'], concurrency,
-                               skip=skip_download)
-        extract_hgt_zip_files(working_dir, concurrency, skip=skip_unzip)
+        # Download HGT zip file in a pool of thread
+        tools.download_hgt_zip_files(args.folder, args.dataset_files, args.concurrency,
+                                     skip=args.skip_download)
+        # Unzip in folder all HGT zip files found in folder
+        tools.extract_hgt_zip_files(args.folder, args.concurrency, skip=args.skip_unzip)
     except (KeyboardInterrupt, worker.WorkerPoolException):
         # in case of ThreadPoolException, the worker which raised the error
         # logs it using logging.exception
         pass
     except Exception as exception:
         logging.exception(exception)
-
-    # Clean on exit
-    if clean_on_exit:
-        logging.debug('Cleaning %s' % working_dir)
-        shutil.rmtree(working_dir)
-    """
