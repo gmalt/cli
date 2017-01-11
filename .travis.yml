@@ -1,9 +1,5 @@
 language: python
 
-env:
-  global:
-    - "TMPDIR=`mktemp \-d`"
-
 python:
   - "2.7"
   - "3.4"
@@ -11,6 +7,9 @@ python:
 
 install:
   - python setup.py develop
+
+before_script:
+    - "TMPDIR=`mktemp -d`"
 
 script:
   - python setup.py test
