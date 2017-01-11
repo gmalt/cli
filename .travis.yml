@@ -2,7 +2,7 @@ language: python
 
 env:
   global:
-    - TMPDIR=`mktemp -d`
+    - "TMPDIR=`mktemp -d`"
 
 python:
   - "2.7"

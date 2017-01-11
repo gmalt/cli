@@ -40,35 +40,38 @@ def test_create_get_hgt_parser_too_few_args(capsys):
            or 'the following arguments are required: dataset, folder' in err  # python 3
 
 
-def test_create_get_hgt_too_much_args(capsys):
+def test_create_get_hgt_too_much_args(capsys, tmpdir):
+    tmp_working_dir = tmpdir.mkdir("working_dir")
     parser = app.create_get_hgt_parser()
     with pytest.raises(SystemExit):
-        parser.parse_args(['small', 'tmp', 'too much'])
+        parser.parse_args(['small', str(tmp_working_dir), 'too much'])
     out, err = capsys.readouterr()
     assert 'unrecognized arguments: too much' in err
 
 
-def test_create_get_hgt_parser_minimal_args():
+def test_create_get_hgt_parser_minimal_args(tmpdir):
+    tmp_working_dir = tmpdir.mkdir("working_dir")
     parser = app.create_get_hgt_parser()
-    parsed = parser.parse_args(['small', 'tmp'])
+    parsed = parser.parse_args(['small', str(tmp_working_dir)])
     assert parsed.concurrency == 1
     assert parsed.dataset.endswith('gmaltcli/datasets/small.json')
     assert len(parsed.dataset_files) == 3
     assert parsed.dataset_sampling == 1201
-    assert parsed.folder.endswith('tmp')
+    assert parsed.folder.endswith('working_dir')
     assert not parsed.skip_download
     assert not parsed.skip_unzip
     assert not parsed.verbose
 
 
-def test_create_get_hgt_parser_all_args():
+def test_create_get_hgt_parser_all_args(tmpdir):
+    tmp_working_dir = tmpdir.mkdir("working_dir")
     parser = app.create_get_hgt_parser()
-    parsed = parser.parse_args(['small', 'tmp', '--skip-download', '--skip-unzip', '-v', '-c 2'])
+    parsed = parser.parse_args(['small', str(tmp_working_dir), '--skip-download', '--skip-unzip', '-v', '-c 2'])
     assert parsed.concurrency == 2
     assert parsed.dataset.endswith('gmaltcli/datasets/small.json')
     assert len(parsed.dataset_files) == 3
     assert parsed.dataset_sampling == 1201
-    assert parsed.folder.endswith('tmp')
+    assert parsed.folder.endswith('working_dir')
     assert parsed.skip_download
     assert parsed.skip_unzip
     assert parsed.verbose
