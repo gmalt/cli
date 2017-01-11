@@ -17,4 +17,5 @@ script:
   - "gmalt-hgtread 1.0001 10.0001 gmaltcli/test/N00E010.hgt | grep \"Location: (0P,0L)\""
   - "gmalt-hgtread 0.861295 10.339703 gmaltcli/test/N00E010.hgt | grep \"Value: 644\""
   - "gmalt-hgtread 0.861295 10.339703 gmaltcli/test/N00E010.hgt | grep \"Location: (408P,166L)\""
-  - "echo \"$TMPDIR\""
+  - "gmalt-hgtget small $TMPDIR"
+  - "[ `ls $TMPDIR | wc -l` -eq "6" ]"
