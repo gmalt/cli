@@ -18,4 +18,7 @@ script:
   - "gmalt-hgtread 0.861295 10.339703 gmaltcli/test/N00E010.hgt | grep \"Value: 644\""
   - "gmalt-hgtread 0.861295 10.339703 gmaltcli/test/N00E010.hgt | grep \"Location: (408P,166L)\""
   - "gmalt-hgtget small $TMPDIR"
-  - "[ `ls $TMPDIR | wc -l` -eq "6" ]"
+  - "ls $TMPDIR | wc -l | grep 6"
+  - "ls $TMPDIR | grep '^N00E009.hgt.zip$'"
+  - "ls $TMPDIR | grep '^N00E009.hgt$'"
+  - "md5sum -b $TMPDIR/N00E009.hgt | grep '0dc319cb922bac1b7ccefa0b55688a51'"
