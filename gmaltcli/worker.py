@@ -5,15 +5,21 @@ import time
 import zipfile
 
 try:
+    # Python 3
     import queue
-except ImportError:
-    import Queue as queue
-
-try:
     from urllib.request import urlopen
     from urllib.error import HTTPError, URLError
 except ImportError:
-    from urllib2 import urlopen, HTTPError, URLError
+    # Python 2
+    from urllib2 import urlopen, HTTPError
+    import Queue as queue
+
+try:
+    # Python 2
+    xrange
+except NameError:
+    # Python 3
+    xrange = range
 
 
 class SafeCounter(object):
