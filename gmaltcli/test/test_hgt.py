@@ -25,13 +25,6 @@ def n00e010_hgt():
     return hgt.HgtParser(hgt_path)
 
 
-@pytest.fixture
-def truncated_n00e010_hgt():
-    hgt_path = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), 'N00E010_truncated.hgt')
-    return hgt.HgtParser(hgt_path, 55, 1201)
-
-
 class TestHgtParser(object):
 
     def test_enter_file_not_found(self, empty_hgt):
@@ -181,32 +174,73 @@ class TestHgtParser(object):
 
 
 class TestHgtValueIterator(object):
-    def test_iter(self, truncated_n00e010_hgt):
-        with truncated_n00e010_hgt as parser:
+    def test_iter(self, n00e010_hgt):
+        with n00e010_hgt as parser:
             values = list(parser.get_value_iterator())
 
-            assert len(values) == 66055  # 1201 * 55
+            assert len(values) == 1442401
             assert (1, 1, 0,
-                    ((0.9907407407407408, 9.999583333333334),
-                     (1.0092592592592593, 9.999583333333334),
-                     (1.0092592592592593, 10.000416666666666),
-                     (0.9907407407407408, 10.000416666666666)),
+                    ((0.9995833333333332, 9.999583333333334),
+                     (1.0004166666666665, 9.999583333333334),
+                     (1.0004166666666665, 10.000416666666666),
+                     (0.9995833333333332, 10.000416666666666)),
                     57) == values[0]
             assert (3, 1054, 3455,
-                    ((0.9537037037037037, 10.877083333333333),
-                     (0.9722222222222223, 10.877083333333333),
-                     (0.9722222222222223, 10.877916666666666),
-                     (0.9537037037037037, 10.877916666666666)),
+                    ((0.9979166666666665, 10.877083333333333),
+                     (0.9987499999999998, 10.877083333333333),
+                     (0.9987499999999998, 10.877916666666666),
+                     (0.9979166666666665, 10.877916666666666)),
                     516) == values[3455]
 
 
 class TestHgtSampleIterator(object):
-    def test_iter(self, truncated_n00e010_hgt):
-        with truncated_n00e010_hgt as parser:
-            values = list(parser.get_sample_iterator(50, 50))
+    def test_iter(self, n00e010_hgt):
+        with n00e010_hgt as parser:
+            square_values = list(parser.get_sample_iterator(50, 50))
 
-            assert len(values) == 50
-            assert len([value for line in values[0] for value in line]) == 2500
-            assert len([value for line in values[24] for value in line]) == 50
-            assert len([value for line in values[25] for value in line]) == 250
-            assert len([value for line in values[49] for value in line]) == 5
+            assert len(square_values) == 625
+
+            assert square_values[0][0] == 0
+            assert square_values[0][1] == 0
+            assert square_values[0][2] == 0
+            assert square_values[0][3] == ((0.9587499999999999, 9.999583333333334),
+                                           (1.0004166666666665, 9.999583333333334),
+                                           (1.0004166666666665, 10.04125),
+                                           (0.9587499999999999, 10.04125))
+            assert len([value for line in square_values[0][4] for value in line]) == 2500
+
+            assert square_values[24][0] == 0
+            assert square_values[24][1] == 1200
+            assert square_values[24][2] == 1200
+            assert square_values[24][3] == ((0.9587499999999999, 10.999583333333334),
+                                            (1.0004166666666665, 10.999583333333334),
+                                            (1.0004166666666665, 11.000416666666666),
+                                            (0.9587499999999999, 11.000416666666666))
+            assert len([value for line in square_values[24][4] for value in line]) == 50
+
+            assert square_values[25][0] == 50
+            assert square_values[25][1] == 0
+            assert square_values[25][2] == 60050
+            assert square_values[25][3] == ((0.9170833333333333, 9.999583333333334),
+                                            (0.9587499999999999, 9.999583333333334),
+                                            (0.9587499999999999, 10.04125),
+                                            (0.9170833333333333, 10.04125))
+            assert len([value for line in square_values[25][4] for value in line]) == 2500
+
+            assert square_values[612][0] == 1200
+            assert square_values[612][1] == 600
+            assert square_values[612][2] == 1441800
+            assert square_values[612][3] == ((-0.00041666666666682363, 10.499583333333334),
+                                             (0.00041666666666650976, 10.499583333333334),
+                                             (0.00041666666666650976, 10.54125),
+                                             (-0.00041666666666682363, 10.54125))
+            assert len([value for line in square_values[612][4] for value in line]) == 50
+
+            assert square_values[624][0] == 1200
+            assert square_values[624][1] == 1200
+            assert square_values[624][2] == 1442400
+            assert square_values[624][3] == ((-0.00041666666666682363, 10.999583333333334),
+                                             (0.00041666666666650976, 10.999583333333334),
+                                             (0.00041666666666650976, 11.000416666666666),
+                                             (-0.00041666666666682363, 11.000416666666666))
+            assert len([value for line in square_values[624][4] for value in line]) == 1

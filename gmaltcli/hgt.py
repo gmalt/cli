@@ -61,6 +61,30 @@ class HgtParser(object):
             (self.corners[1][0] - self.square_height, self.corners[1][1] + self.square_width)
         )
 
+    def get_square_corners(self, line, col):
+        """ Get the 4 corner positions of a square knowing the line number and the column
+
+        :param int line: the line of the square
+        :param int col: the column of the square
+        :return: tuple of 4 position tuples (bottom left, top left, top right, bottom right) with (lat, lng) for each
+        position as float
+        :rtype: ((float, float), (float, float), (float, float), (float, float))
+        """
+        return (
+            # bottom left corner
+            (self.top_left_square[0][0] - line * self.square_height,
+             self.top_left_square[0][1] + col * self.square_width),
+            # top left corner
+            (self.top_left_square[1][0] - line * self.square_height,
+             self.top_left_square[1][1] + col * self.square_width),
+            # top right corner
+            (self.top_left_square[2][0] - line * self.square_height,
+             self.top_left_square[2][1] + col * self.square_width),
+            # bottom right corner
+            (self.top_left_square[3][0] - line * self.square_height,
+             self.top_left_square[3][1] + col * self.square_width)
+        )
+
     def shift_first_square(self, line, col):
         """ Shift the top left square by the provided number of lines and columns
 
@@ -255,6 +279,9 @@ class HgtSampleIterator(object):
     :type parser: :class:`gmaltcli.hgt.HgtParser`
     :param int width: width of the sample area
     :param int height: height of the sample area
+    :return: tuple with (line number of top left corner, column number of top left corner,
+    zero based index of top left corner, square corners position, list of all elevation values in square line per line)
+    :rtype: (int, int, int, ((float, float), (float, float), (float, float), (float, float)), int[][)
     """
     def __init__(self, parser, width, height):
         self.parser = parser
@@ -264,7 +291,29 @@ class HgtSampleIterator(object):
     def __iter__(self):
         for top_left_line_idx in range(0, self.parser.sample_lat, self.height):
             for top_left_col_idx in range(0, self.parser.sample_lng, self.width):
-                yield self._get_square_values(top_left_col_idx, top_left_line_idx)
+                values = self._get_square_values(top_left_col_idx, top_left_line_idx)
+                # Get all corners of the samples square area
+                top_left_square_corners = self.parser.get_square_corners(top_left_line_idx, top_left_col_idx)
+                top_left_corner = top_left_square_corners[1]
+                square_corners = (
+                    # bottom left
+                    (top_left_corner[0] - len(values) * self.parser.square_height, top_left_corner[1]),
+                    # top left
+                    top_left_corner,
+                    # top right
+                    (top_left_corner[0], top_left_corner[1] + len(values[0]) * self.parser.square_width),
+                    # bottom right
+                    (top_left_corner[0] - len(values) * self.parser.square_height,
+                     top_left_corner[1] + len(values[0]) * self.parser.square_width)
+                )
+                # Yield same model as HgtValueIterator
+                yield (
+                    top_left_line_idx,
+                    top_left_col_idx,
+                    self.parser.get_idx(top_left_col_idx, top_left_line_idx),
+                    square_corners,
+                    values
+                )
         raise StopIteration
 
     def _get_square_values(self, top_left_col_idx, top_left_line_idx):
