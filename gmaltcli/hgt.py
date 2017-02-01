@@ -232,9 +232,9 @@ class HgtParser(object):
         if not self.is_inside(pos):
             raise Exception('point {} is not inside HGT file {}'.format(pos, self.filename))
 
-        lat_idx = 1200 - int(round((pos[0] - self.bottom_left_center[0]) / self.square_height))
+        lat_idx = (self.sample_lat - 1) - int(round((pos[0] - self.bottom_left_center[0]) / self.square_height))
         lng_idx = int(round((pos[1] - self.bottom_left_center[1]) / self.square_width))
-        idx = lat_idx * 1201 + lng_idx
+        idx = lat_idx * self.sample_lng + lng_idx
         return lat_idx, lng_idx, idx
 
     def get_elevation(self, pos):
