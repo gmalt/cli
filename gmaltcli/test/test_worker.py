@@ -58,7 +58,7 @@ class ErrorWorker(FalseWorker):
 
 
 class TestWorkerPool(object):
-    def setup_method(self):
+    def setup_method(self, func_method):
         self.processed = {}
         self.pool = worker.WorkerPool(FalseWorker, 5, self.processed)
         self.pool.fill(['item' + str(item) for item in range(1, 100)])
