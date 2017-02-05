@@ -1,8 +1,4 @@
-import glob
-import json
 import logging
-import os
-import shutil
 import sys
 import argparse
 

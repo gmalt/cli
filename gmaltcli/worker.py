@@ -62,7 +62,7 @@ class WorkerPool(object):
     .. note:: the constructor other args and kwargs are passed as additionnal
         params to the worker __init__ method
 
-    :param class worker: The class of the Worker thread
+    :param worker: The class of the Worker thread
     :type worker: :class:`gmaltcli.worker.Worker`
     :param int size: number of worker to create in pool
     """

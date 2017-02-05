@@ -76,6 +76,7 @@ def test_create_get_hgt_parser_all_args(tmpdir):
     assert parsed.skip_unzip
     assert parsed.verbose
 
+
 def test_create_get_hgt_parser_dataset_as_file(tmpdir):
     false_dataset = {'sampling': 321,
                      'files': {
