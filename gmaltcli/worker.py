@@ -94,7 +94,7 @@ class WorkerPool(object):
         .. note:: Used instead of the threading `join` method in order to allow
             the main thread to watch for event like `KeyboardInterrupt`
         """
-        while threading.active_count() > 1:  # 1 = only the main thread remaining
+        while any([worker.isAlive() for worker in self.workers]):
             time.sleep(0.1)
 
     def start(self):
