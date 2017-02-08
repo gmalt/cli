@@ -11,7 +11,7 @@ try:
     from urllib.error import HTTPError, URLError
 except ImportError:
     # Python 2
-    from urllib2 import urlopen, HTTPError
+    from urllib2 import urlopen, HTTPError, URLError
     import Queue as queue
 
 try:
@@ -231,8 +231,10 @@ class DownloadWorker(Worker):
             self._download_file(url, filename)
         except URLError:
             logging.error('Unable to download file {}. Verify your internet connection'.format(url))
+            raise
         except HTTPError:
             logging.error('Unable to download file {}. Verify the link.'.format(url))
+            raise
 
     def _download_file(self, url, filename):
         """ Download a file and stores it in `folder`

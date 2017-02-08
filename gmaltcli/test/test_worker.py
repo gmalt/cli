@@ -1,3 +1,6 @@
+import os
+
+import logging
 import pytest
 import time
 import threading
@@ -5,8 +8,10 @@ import threading
 try:
     # Python 3
     import queue
+    from urllib.error import HTTPError, URLError
 except ImportError:
     # Python 2
+    from urllib2 import urlopen, HTTPError, URLError
     import Queue as queue
 
 import gmaltcli.worker as worker
@@ -163,3 +168,62 @@ class TestWorker(object):
         assert not hasattr(self.error_worker, 'on_end_called')
         assert self.error_worker.queue.qsize() == 19
         assert self.error_worker.stop_event.isSet()
+
+
+class TestDownloadWorker(object):
+    def setup_method(self, func_method):
+        stop_event = threading.Event()
+        counter = worker.SafeCounter()
+        worker_queue = queue.Queue()
+        folder = None
+        self.download_worker = worker.DownloadWorker(1, worker_queue, counter,
+                                                     stop_event, folder)
+
+    def test__secured_download_file_connection_error(self, monkeypatch):
+        def raise_url_error(url, filename):
+            raise URLError('message')
+        monkeypatch.setattr(self.download_worker, '_download_file', raise_url_error)
+        monkeypatch.setattr(logging, 'error', lambda x: x)
+        with pytest.raises(URLError):
+            self.download_worker._secured_download_file('url', 'filename')
+
+    def test__secured_download_file_wrong_url(self, monkeypatch):
+        def raise_url_error(url, filename):
+            raise HTTPError('message', None, None, None, None)
+        monkeypatch.setattr(self.download_worker, '_download_file', raise_url_error)
+        monkeypatch.setattr(logging, 'error', lambda x: x)
+        with pytest.raises(HTTPError):
+            self.download_worker._secured_download_file('url', 'filename')
+
+    def test__download_file(self, tmpdir):
+        tmp_folder = str(tmpdir.mkdir('gmaltcli'))
+        self.download_worker.folder = tmp_folder
+
+        self.download_worker._download_file(
+            'http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E010.hgt.zip',
+            'N00E010.hgt.zip')
+
+        downloaded_path = os.path.join(self.download_worker.folder, 'N00E010.hgt.zip')
+        assert os.path.exists(downloaded_path)
+        assert os.path.getsize(downloaded_path) == 1743694
+
+
+class TestExtractWorker(object):
+    def setup_method(self, func_method):
+        stop_event = threading.Event()
+        counter = worker.SafeCounter()
+        worker_queue = queue.Queue()
+        folder = None
+        self.extract_worker = worker.ExtractWorker(1, worker_queue, counter,
+                                                   stop_event, folder)
+
+    def test__extract_file(self, tmpdir):
+        tmp_folder = str(tmpdir.mkdir('gmaltcli'))
+        self.extract_worker.folder = tmp_folder
+        zip_file = os.path.realpath(os.path.join(os.path.dirname(__file__), 'N00E010.hgt.zip'))
+
+        self.extract_worker._extract_file(zip_file)
+
+        extracted_file = os.path.join(tmp_folder, 'N00E010.hgt')
+        assert os.path.exists(extracted_file)
+        assert os.path.getsize(extracted_file) == 2884802

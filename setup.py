@@ -15,7 +15,7 @@ setup(
     license="MIT",
     keywords="example documentation tutorial",
     url="http://github.com/gmalt/gmaltcli",
-    packages=find_packages(),
+    packages=find_packages(exclude=["test"]),
     long_description=read('README.md'),
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'flake8', 'mock'],
