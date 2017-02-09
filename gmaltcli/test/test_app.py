@@ -106,10 +106,11 @@ def test_create_load_hgt_parser_too_few_args(capsys):
            or 'the following arguments are required: folder, -u/--user' in err  # python 3
 
 
-def test_create_load_hgt_parser_too_much_args(capsys):
+def test_create_load_hgt_parser_too_much_args(capsys, tmpdir):
+    tmp_working_dir = tmpdir.mkdir("working_dir")
     parser = app.create_load_hgt_parser()
     with pytest.raises(SystemExit):
-        parser.parse_args(['-u', 'user', 'tmp', 'too much'])
+        parser.parse_args(['-u', 'user', str(tmp_working_dir), 'too much'])
     out, err = capsys.readouterr()
     assert 'unrecognized arguments: too much' in err
 
