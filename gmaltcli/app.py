@@ -86,8 +86,7 @@ def get_hgt():
     parser = create_get_hgt_parser()
     args = parser.parse_args()
 
-    verbose_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.getLogger().setLevel(verbose_level)
+    tools.configure_logging(args.verbose)
 
     logging.info('config - dataset file : %s' % args.dataset)
     logging.info('config - parallelism : %i' % args.concurrency)
@@ -105,3 +104,60 @@ def get_hgt():
         pass
     except Exception as exception:
         logging.exception(exception)
+
+
+def create_load_hgt_parser():
+    """ CLI parser for gmalt-hgtload
+
+    :return: cli parser
+    :rtype: :class:`argparse.ArgumentParser`
+    """
+    parser = argparse.ArgumentParser(description='Read HGT files and import elevation values into a database')
+    parser.add_argument('folder', type=tools.existing_folder,
+                        help='Path to the folder where the HGT files are stored.')
+    parser.add_argument('-c', type=int, dest='concurrency', default=1,
+                        help='How many worker will attempt to load files in parallel')
+    parser.add_argument('-v', dest='verbose', action='store_true', help='increase verbosity level')
+
+    # Database connection args
+    db_group = parser.add_argument_group('database', 'database connection configuration')
+    db_group.add_argument('--type', type=str, dest='type', default="postgres",
+                          help='The type of your database (default : postgres)')
+    db_group.add_argument('-H', '--host', type=str, dest='host', default="localhost",
+                          help='The hostname of the database')
+    db_group.add_argument('-P', '--port', type=int, dest='port', help='The port of the database')
+    db_group.add_argument('-d', '--db', type=str, dest='database', default="gmalt", help='The name of the database')
+    db_group.add_argument('-u', '--user', type=str, dest='user', required=True,
+                          help='The user to connect to the database')
+    db_group.add_argument('-p', '--pass', type=str, dest='password', help='The password to connect to the database')
+    db_group.add_argument('-t', '--table', type=str, dest='table', default="elevation",
+                          help='The table name to import data')
+
+    # Raster configuration
+    gis_group = parser.add_argument_group('gis', 'GIS configuration')
+    gis_group.add_argument('-r', '--raster', dest='use_raster', action='store_true',
+                           help='Use raster to import data. Your database must have GIS capabilities '
+                                'like PostGIS for PostgreSQL.')
+    gis_group.add_argument('-s', '--sample', nargs=2, type=int, dest='sample', metavar=('LNG_SAMPLE', 'LAT_SAMPLE'),
+                           help="Separate a HGT file in multiple rasters. Sample on lng axis and lat axis.")
+
+    return parser
+
+
+def load_hgt():
+    """ Function called by the console_script `gmalt-hgtload`
+
+    Usage:
+
+        gmalt-hgtload [options] <folder>
+    """
+    # Parse command line arguments
+    parser = create_load_hgt_parser()
+    args = parser.parse_args()
+
+
+    tools.configure_logging(args.verbose)
+
+    print(args)
+    logging.info('config - parallelism : %i' % args.concurrency)
+    logging.info('config - folder : %s' % args.folder)

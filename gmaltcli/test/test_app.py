@@ -94,3 +94,59 @@ def test_create_get_hgt_parser_dataset_as_file(tmpdir):
     assert len(parsed.dataset_files) == 1
     assert parsed.dataset_sampling == 321
     assert parsed.folder.endswith('working_dir')
+
+
+def test_create_load_hgt_parser_too_few_args(capsys):
+    parser = app.create_load_hgt_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args([])
+    out, err = capsys.readouterr()
+    assert 'too few arguments' in err \
+           or 'the following arguments are required: folder, -u/--user' in err  # python 3
+
+
+def test_create_load_hgt_parser_too_much_args(capsys):
+    parser = app.create_load_hgt_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(['-u', 'user', 'tmp', 'too much'])
+    out, err = capsys.readouterr()
+    assert 'unrecognized arguments: too much' in err
+
+
+def test_create_load_hgt_parser_all_args(tmpdir):
+    tmp_working_dir = tmpdir.mkdir("working_dir")
+    parser = app.create_load_hgt_parser()
+    parsed = parser.parse_args(['-u', 'gmalt', str(tmp_working_dir)])
+    assert parsed.concurrency == 1
+    assert parsed.database == 'gmalt'
+    assert parsed.folder == str(tmp_working_dir)
+    assert parsed.host == 'localhost'
+    assert parsed.password is None
+    assert parsed.port is None
+    assert parsed.sample is None
+    assert parsed.table == 'elevation'
+    assert parsed.type == 'postgres'
+    assert parsed.use_raster is False
+    assert parsed.user == 'gmalt'
+    assert parsed.verbose is False
+
+
+def test_create_load_hgt_parser_all_args(tmpdir):
+    tmp_working_dir = tmpdir.mkdir("working_dir")
+    parser = app.create_load_hgt_parser()
+    parsed = parser.parse_args(['-c', '2', '-v', '--type', 'mysql', '-H', 'db.local', '-P', '3306', '-d', 'elev_db',
+                                '-u', 'gmalt', '-p', 'password', '-t', 'elev_tb', '-r', '-s', '3601', '3601',
+                                str(tmp_working_dir)])
+    assert parsed.concurrency == 2
+    assert parsed.database == 'elev_db'
+    assert parsed.folder == str(tmp_working_dir)
+    assert parsed.host == 'db.local'
+    assert parsed.password == 'password'
+    assert parsed.port == 3306
+    assert parsed.sample == [3601, 3601]
+    assert parsed.table == 'elev_tb'
+    assert parsed.type == 'mysql'
+    assert parsed.use_raster is True
+    assert parsed.user == 'gmalt'
+    assert parsed.verbose is True

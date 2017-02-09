@@ -17,11 +17,22 @@ def dataset_file(dataset):
     return dataset
 
 
-def writable_folder(folder_path):
+def configure_logging(verbosity_level):
+    verbose_level = logging.DEBUG if verbosity_level else logging.INFO
+    logging.getLogger().setLevel(verbose_level)
+
+
+def existing_folder(folder_path):
     fullpath = os.path.realpath(folder_path)
 
     if not os.path.isdir(fullpath):
         raise argparse.ArgumentTypeError('{} does not exist'.format(fullpath))
+
+    return fullpath
+
+
+def writable_folder(folder_path):
+    fullpath = existing_folder(folder_path)
 
     if not os.access(fullpath, os.W_OK | os.X_OK):
         raise argparse.ArgumentTypeError('{} is not writable'.format(fullpath))

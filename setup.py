@@ -38,5 +38,6 @@ setup(
         gmalt-gmaltcli = gmaltcli:run
         gmalt-hgtread = gmaltcli.app:read_from_hgt
         gmalt-hgtget = gmaltcli.app:get_hgt
+        gmalt-hgtload = gmaltcli.app:load_hgt
     '''
 )
