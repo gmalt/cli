@@ -98,3 +98,19 @@ def extract_hgt_zip_files(working_dir, concurrency, skip=False):
     extract_task.fill(zip_files)
     extract_task.start()
     logging.debug('Extract end')
+
+
+def import_hgt_zip_files(working_dir, concurrency, **db_connection):
+    """ Extract the HGT zip files in working_dir
+
+    :param str working_dir: folder where the zip files are
+    :param int concurrency: number of worker to start
+    :param bool skip: if True skip this step
+    """
+    hgt_files = [os.path.realpath(filename) for filename in glob.glob(os.path.join(working_dir, "*.hgt"))]
+    logging.info('Nb of files to import : {}'.format(len(hgt_files)))
+    logging.debug('Import start')
+    import_task = worker.WorkerPool(worker.ImportWorker, concurrency, working_dir, **db_connection)
+    import_task.fill(hgt_files)
+    import_task.start()
+    logging.debug('Import end')

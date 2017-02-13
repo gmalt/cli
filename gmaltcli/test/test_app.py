@@ -129,7 +129,7 @@ def test_create_load_hgt_parser_all_args(tmpdir):
     assert parsed.table == 'elevation'
     assert parsed.type == 'postgres'
     assert parsed.use_raster is False
-    assert parsed.user == 'gmalt'
+    assert parsed.username == 'gmalt'
     assert parsed.verbose is False
 
 
@@ -149,5 +149,5 @@ def test_create_load_hgt_parser_all_args(tmpdir):
     assert parsed.table == 'elev_tb'
     assert parsed.type == 'mysql'
     assert parsed.use_raster is True
-    assert parsed.user == 'gmalt'
+    assert parsed.username == 'gmalt'
     assert parsed.verbose is True

@@ -5,6 +5,9 @@ import argparse
 import gmaltcli.hgt as hgt
 import gmaltcli.tools as tools
 import gmaltcli.worker as worker
+import gmaltcli.database as database
+
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def create_read_from_hgt_parser():
@@ -127,7 +130,7 @@ def create_load_hgt_parser():
                           help='The hostname of the database')
     db_group.add_argument('-P', '--port', type=int, dest='port', help='The port of the database')
     db_group.add_argument('-d', '--db', type=str, dest='database', default="gmalt", help='The name of the database')
-    db_group.add_argument('-u', '--user', type=str, dest='user', required=True,
+    db_group.add_argument('-u', '--user', type=str, dest='username', required=True,
                           help='The user to connect to the database')
     db_group.add_argument('-p', '--pass', type=str, dest='password', help='The password to connect to the database')
     db_group.add_argument('-t', '--table', type=str, dest='table', default="elevation",
@@ -153,11 +156,31 @@ def load_hgt():
     """
     # Parse command line arguments
     parser = create_load_hgt_parser()
-    args = parser.parse_args()
+    args = vars(parser.parse_args())
+
+    tools.configure_logging(args.pop('verbose'))
+
+    # Pop everything not related to database uri string
+    concurrency = args.pop('concurrency')
+    folder = args.pop('folder')
+    use_raster = args.pop('use_raster')
+    samples = args.pop('sample', (None, None))
+    db_driver = args.pop('type')
+    table_name = args.pop('table')
+
+    # sqlalchemy.engine.url.URL args
+    db_info = args
+
+    logging.info('config - parallelism : %i' % concurrency)
+    logging.info('config - folder : %s' % folder)
+
+    connection = database.Database(db_driver, use_raster, table_name, pool_size=concurrency, **db_info)
+    print(connection)
+    connection.is_valid()
+
+    try:
+        tools.import_hgt_zip_files(folder, concurrency, **args)
+    except:
+        logging.exception('')
 
 
-    tools.configure_logging(args.verbose)
-
-    print(args)
-    logging.info('config - parallelism : %i' % args.concurrency)
-    logging.info('config - folder : %s' % args.folder)

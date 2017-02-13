@@ -273,3 +273,24 @@ class ExtractWorker(Worker):
         with zipfile.ZipFile(filename) as zip_fd:
             for name in zip_fd.namelist():
                 zip_fd.extract(name, self.folder)
+
+
+class ImportWorker(Worker):
+    """ Worker in charge of reading hgt file found in `folder` and importing it """
+
+    def __init__(self, id_, queue, counter, stop_event, folder, **db_info):
+        super(ImportWorker, self).__init__(id_, queue, counter, stop_event)
+        self.folder = folder
+        self.db_info = db_info
+
+    def process(self, queue_item, counter_info):
+        self._log_debug('importing %s', (queue_item,))
+        logging.info('Importing file %d/%d' % counter_info)
+        self._import_file(queue_item)
+
+    def _import_file(self, filepath):
+        """ Read a hgt file in `folder` and import it
+
+        :param str filepath: the path of the file to import
+        """
+        logging.info('todo')
