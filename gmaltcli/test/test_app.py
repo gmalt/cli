@@ -115,7 +115,7 @@ def test_create_load_hgt_parser_too_much_args(capsys, tmpdir):
     assert 'unrecognized arguments: too much' in err
 
 
-def test_create_load_hgt_parser_all_args(tmpdir):
+def test_create_load_hgt_parser_min_args(tmpdir):
     tmp_working_dir = tmpdir.mkdir("working_dir")
     parser = app.create_load_hgt_parser()
     parsed = parser.parse_args(['-u', 'gmalt', str(tmp_working_dir)])
@@ -131,14 +131,15 @@ def test_create_load_hgt_parser_all_args(tmpdir):
     assert parsed.use_raster is False
     assert parsed.username == 'gmalt'
     assert parsed.verbose is False
+    assert parsed.traceback is False
 
 
 def test_create_load_hgt_parser_all_args(tmpdir):
     tmp_working_dir = tmpdir.mkdir("working_dir")
     parser = app.create_load_hgt_parser()
-    parsed = parser.parse_args(['-c', '2', '-v', '--type', 'mysql', '-H', 'db.local', '-P', '3306', '-d', 'elev_db',
-                                '-u', 'gmalt', '-p', 'password', '-t', 'elev_tb', '-r', '-s', '3601', '3601',
-                                str(tmp_working_dir)])
+    parsed = parser.parse_args(['-c', '2', '-v', '-tb', '--type', 'mysql', '-H', 'db.local', '-P', '3306',
+                                '-d', 'elev_db', '-u', 'gmalt', '-p', 'password', '-t', 'elev_tb', '-r', '-s',
+                                '3601', '3601', str(tmp_working_dir)])
     assert parsed.concurrency == 2
     assert parsed.database == 'elev_db'
     assert parsed.folder == str(tmp_working_dir)
@@ -151,3 +152,4 @@ def test_create_load_hgt_parser_all_args(tmpdir):
     assert parsed.use_raster is True
     assert parsed.username == 'gmalt'
     assert parsed.verbose is True
+    assert parsed.traceback is True

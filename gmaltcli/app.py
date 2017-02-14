@@ -1,6 +1,7 @@
 import logging
 import sys
 import argparse
+import sqlalchemy.exc
 
 import gmaltcli.hgt as hgt
 import gmaltcli.tools as tools
@@ -121,6 +122,7 @@ def create_load_hgt_parser():
     parser.add_argument('-c', type=int, dest='concurrency', default=1,
                         help='How many worker will attempt to load files in parallel')
     parser.add_argument('-v', dest='verbose', action='store_true', help='increase verbosity level')
+    parser.add_argument('-tb', '--traceback', dest='traceback', action='store_true', help=argparse.SUPPRESS)
 
     # Database connection args
     db_group = parser.add_argument_group('database', 'database connection configuration')
@@ -152,12 +154,14 @@ def load_hgt():
 
     Usage:
 
-        gmalt-hgtload [options] <folder>
+        gmalt-hgtload [options] -u <user> <folder>
     """
     # Parse command line arguments
     parser = create_load_hgt_parser()
     args = vars(parser.parse_args())
 
+    # logging
+    traceback = args.pop('traceback')
     tools.configure_logging(args.pop('verbose'))
 
     # Pop everything not related to database uri string
@@ -174,13 +178,18 @@ def load_hgt():
     logging.info('config - parallelism : %i' % concurrency)
     logging.info('config - folder : %s' % folder)
 
-    connection = database.Database(db_driver, use_raster, table_name, pool_size=concurrency, **db_info)
-    print(connection)
-    connection.is_valid()
+    # create sqlalchemy engine
+    engine = database.create_engine(db_driver, pool_size=concurrency, **db_info)
 
     try:
-        tools.import_hgt_zip_files(folder, concurrency, **args)
-    except:
-        logging.exception('')
+        # First validate that the database is ready
+        with database.Manager(db_driver, use_raster, engine, table_name) as manager:
+            manager.prepare_environment()
 
+        # Then process HGT files
+        tools.import_hgt_zip_files(folder, concurrency, **args)
+    except sqlalchemy.exc.OperationalError:
+        logging.error('Unable to connect to database with these settings : {}'.format(engine.url), exc_info=traceback)
+    except Exception as e:
+        logging.error('Unknown error : {}'.format(str(e)), exc_info=traceback)
 
