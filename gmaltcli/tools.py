@@ -17,9 +17,11 @@ def dataset_file(dataset):
     return dataset
 
 
-def configure_logging(verbosity_level):
+def configure_logging(verbosity_level, echo=False):
     verbose_level = logging.DEBUG if verbosity_level else logging.INFO
     logging.getLogger().setLevel(verbose_level)
+    if echo:
+        logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 
 def existing_folder(folder_path):

@@ -123,6 +123,7 @@ def create_load_hgt_parser():
                         help='How many worker will attempt to load files in parallel')
     parser.add_argument('-v', dest='verbose', action='store_true', help='increase verbosity level')
     parser.add_argument('-tb', '--traceback', dest='traceback', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('-e', '--echo', dest='echo', action='store_true', help=argparse.SUPPRESS)
 
     # Database connection args
     db_group = parser.add_argument_group('database', 'database connection configuration')
@@ -162,7 +163,7 @@ def load_hgt():
 
     # logging
     traceback = args.pop('traceback')
-    tools.configure_logging(args.pop('verbose'))
+    tools.configure_logging(args.pop('verbose'), echo=args.pop('echo'))
 
     # Pop everything not related to database uri string
     concurrency = args.pop('concurrency')
@@ -177,6 +178,11 @@ def load_hgt():
 
     logging.info('config - parallelism : %i' % concurrency)
     logging.info('config - folder : %s' % folder)
+    logging.info('config - db driver : %s' % db_driver)
+    logging.info('config - db host : %s' % db_info.get('host'))
+    logging.info('config - db user : %s' % db_info.get('username'))
+    logging.info('config - db name : %s' % db_info.get('database'))
+    logging.info('config - db table : %s' % table_name)
 
     # create sqlalchemy engine
     engine = database.create_engine(db_driver, pool_size=concurrency, **db_info)

@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy import create_engine as sqlalchemy_create_engine
 import sqlalchemy.engine.url as sql_url
 
@@ -9,7 +10,7 @@ def create_engine(type_, pool_size=1, **db_info):
     
     :param str type_: the type of engine (postgres, mysql) 
     :param int pool_size: pool size of the engine (at least as much as the number of threads 
-        in :class:`gmaltcli.worker.WorkerPool`) 
+        in :class:`gmaltcli.worker.WorkerPool`)
     :return: a sqlalchemy engine
     :rtype: :class:`sqlalchemy.engine.base.Engine`
     """
@@ -67,11 +68,16 @@ class BaseManager(object):
         self.table_name = table_name
 
     def __enter__(self):
-        print('here')
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.connection.close()
+
+    def _execute(self, query, params=None, method='fetchall'):
+        params = params if params is not None else {}
+        with self.connection.begin():
+            result = self.connection.execute(query, params)
+            return getattr(result, method)()
 
     def prepare_environment(self):
         raise Exception('to be implemented in child class')
@@ -85,8 +91,25 @@ class PostgresManager(BaseManager):
     TYPE = 'postgres'
     USE_RASTER = False
 
-    def prepare_environment(self):
+    TABLE_EXISTS_QUERY = """ 
+      SELECT EXISTS(
+        SELECT  1 
+        FROM    information_schema.tables 
+        WHERE   table_name=%(table_name)s
+      ) """
+
+    def table_exists(self):
+        return self._execute(self.TABLE_EXISTS_QUERY, {'table_name': self.table_name}, method='scalar')
+
+    def create_table(self):
         pass
+
+    def prepare_environment(self):
+        if not self.table_exists():
+            logging.debug('Table {} not found. Creation in progress.'.format(self.table_name))
+            self.create_table()
+        else:
+            logging.debug('Table {} exists. Nothing to create.'.format(self.table_name))
 
     def insert_or_update(self, values):
         pass
