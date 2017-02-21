@@ -1,6 +1,8 @@
 import logging
+
 from sqlalchemy import create_engine as sqlalchemy_create_engine
 import sqlalchemy.engine.url as sql_url
+import sqlalchemy.exc
 
 
 def create_engine(type_, pool_size=1, **db_info):
@@ -76,52 +78,79 @@ class BaseManager(object):
     def _execute(self, query, params=None, method='fetchall'):
         params = params if params is not None else {}
         with self.connection.begin():
-            result = self.connection.execute(query, params)
-            return getattr(result, method)()
-
-    def prepare_environment(self):
-        raise Exception('to be implemented in child class')
-
-    def insert_or_update(self):
-        raise Exception('to be implemented in child class')
-
-
-class PostgresManager(BaseManager):
-    __metaclass__ = ManagerRegistry
-    TYPE = 'postgres'
-    USE_RASTER = False
-
-    TABLE_EXISTS_QUERY = """ 
-      SELECT EXISTS(
-        SELECT  1 
-        FROM    information_schema.tables 
-        WHERE   table_name=%(table_name)s
-      ) """
+            result = self.connection.execute(query.format(**params), params)
+            if result.returns_rows:
+                return getattr(result, method)()
+            else:
+                return None
 
     def table_exists(self):
         return self._execute(self.TABLE_EXISTS_QUERY, {'table_name': self.table_name}, method='scalar')
 
     def create_table(self):
-        pass
+        return self._execute(self.TABLE_CREATE_QUERY, {'table_name': self.table_name})
 
     def prepare_environment(self):
+        if not self.is_compatible():
+            raise sqlalchemy.exc.NotSupportedError('Database is not compatible with the provided settings')
+
+        logging.debug('Database compatible with provided settings.')
+
         if not self.table_exists():
             logging.debug('Table {} not found. Creation in progress.'.format(self.table_name))
             self.create_table()
+            logging.info('Table {} created.'.format(self.table_name))
         else:
             logging.debug('Table {} exists. Nothing to create.'.format(self.table_name))
 
-    def insert_or_update(self, values):
-        pass
+    def is_compatible(self):
+        return True
+
+    def insert_or_update(self):
+        raise Exception('to be implemented in child class')
 
 
-class PostgresRasterManager(BaseManager):
-    __metaclass__ = ManagerRegistry
+class BasePostgresManager(BaseManager):
     TYPE = 'postgres'
+
+    TABLE_EXISTS_QUERY = """ 
+          SELECT EXISTS(
+            SELECT  1 
+            FROM    information_schema.tables 
+            WHERE   table_name=%(table_name)s
+          ) """
+
+
+class PostgresManager(BasePostgresManager):
+    __metaclass__ = ManagerRegistry
+    USE_RASTER = False
+
+    TABLE_CREATE_QUERY = """
+            CREATE TABLE "{table_name}" (
+                lat_min DOUBLE PRECISION,
+                lng_min DOUBLE PRECISION, 
+                lat_max DOUBLE PRECISION,
+                lng_max DOUBLE PRECISION,
+                "value" SMALLINT,
+                PRIMARY KEY (lat_min, lng_min, lat_max, lng_max)
+            ); """
+
+
+class PostgresRasterManager(BasePostgresManager):
+    __metaclass__ = ManagerRegistry
     USE_RASTER = True
 
-    def prepare_environment(self):
-        pass
+    TABLE_CREATE_QUERY = """
+            CREATE TABLE "{table_name}" ("rid" serial PRIMARY KEY,"rast" raster);
+            CREATE INDEX "{table_name}_rast_gist_idx" ON "{table_name}" USING gist (st_convexhull("rast"));
+        """
 
-    def insert_or_update(self, values):
-        pass
+    POSTGIS_AVAILABLE_QUERY = """
+            SELECT EXISTS(
+                SELECT  1
+                FROM    pg_extension 
+                WHERE   extname='postgis'
+              ) """
+
+    def is_compatible(self):
+        return self._execute(self.POSTGIS_AVAILABLE_QUERY, method='scalar')
