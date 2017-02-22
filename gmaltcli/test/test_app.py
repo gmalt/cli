@@ -125,7 +125,7 @@ def test_create_load_hgt_parser_min_args(tmpdir):
     assert parsed.host == 'localhost'
     assert parsed.password is None
     assert parsed.port is None
-    assert parsed.sample is None
+    assert parsed.sample == (None, None)
     assert parsed.table == 'elevation'
     assert parsed.type == 'postgres'
     assert parsed.use_raster is False
