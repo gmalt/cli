@@ -145,7 +145,8 @@ def create_load_hgt_parser():
                            help='Use raster to import data. Your database must have GIS capabilities '
                                 'like PostGIS for PostgreSQL.')
     gis_group.add_argument('-s', '--sample', nargs=2, type=int, dest='sample', metavar=('LNG_SAMPLE', 'LAT_SAMPLE'),
-                           help="Separate a HGT file in multiple rasters. Sample on lng axis and lat axis.")
+                           default=(None, None), help="Separate a HGT file in multiple rasters. Sample on lng axis "
+                                                      "and lat axis.")
 
     return parser
 
@@ -169,7 +170,7 @@ def load_hgt():
     concurrency = args.pop('concurrency')
     folder = args.pop('folder')
     use_raster = args.pop('use_raster')
-    samples = args.pop('sample', (None, None))
+    samples = args.pop('sample')
     db_driver = args.pop('type')
     table_name = args.pop('table')
 
@@ -183,17 +184,20 @@ def load_hgt():
     logging.info('config - db user : %s' % db_info.get('username'))
     logging.info('config - db name : %s' % db_info.get('database'))
     logging.info('config - db table : %s' % table_name)
+    if use_raster:
+        logging.debug('config - use raster : %s' % use_raster)
+        logging.debug('config - raster sampling : {}'.format('{}x{}'.format(*samples) if samples[0] else 'none'))
 
     # create sqlalchemy engine
-    engine = database.create_engine(db_driver, pool_size=concurrency, **db_info)
+    factory = database.ManagerFactory(db_driver, table_name, pool_size=concurrency, **db_info)
 
     try:
         # First validate that the database is ready
-        with database.Manager(db_driver, use_raster, engine, table_name) as manager:
+        with factory.get_manager(use_raster) as manager:
             manager.prepare_environment()
 
         # Then process HGT files
-        tools.import_hgt_zip_files(folder, concurrency, **args)
+        tools.import_hgt_zip_files(folder, concurrency, factory, use_raster, samples)
     except sqlalchemy.exc.OperationalError:
         logging.error('Unable to connect to database with these settings : {}'.format(engine.url), exc_info=traceback)
     except Exception as e:

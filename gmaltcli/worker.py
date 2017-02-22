@@ -21,6 +21,8 @@ except NameError:
     # Python 3
     xrange = range
 
+import gmaltcli.hgt as hgt
+
 
 class SafeCounter(object):
     """ A counter thread-safe.
@@ -278,10 +280,12 @@ class ExtractWorker(Worker):
 class ImportWorker(Worker):
     """ Worker in charge of reading hgt file found in `folder` and importing it """
 
-    def __init__(self, id_, queue, counter, stop_event, folder, **db_info):
-        super(ImportWorker, self).__init__(id_, queue, counter, stop_event)
+    def __init__(self, id_, queue_obj, counter, stop_event, folder, factory, use_raster, samples):
+        super(ImportWorker, self).__init__(id_, queue_obj, counter, stop_event)
         self.folder = folder
-        self.db_info = db_info
+        self.factory = factory
+        self.use_raster = use_raster
+        self.sample_with, self.sample_height = samples
 
     def process(self, queue_item, counter_info):
         self._log_debug('importing %s', (queue_item,))
@@ -293,4 +297,19 @@ class ImportWorker(Worker):
 
         :param str filepath: the path of the file to import
         """
-        logging.info('todo')
+        with self.factory.get_manager(self.use_raster) as manager:
+            with hgt.HgtParser(filepath) as parser:
+                elev_iter = self._get_iterator(parser)
+                self._execute_import(elev_iter, manager)
+
+    def _execute_import(self, elev_iter, manager):
+        for value in elev_iter:
+            print(value)
+
+    def _get_iterator(self, parser):
+        if self.use_raster:
+            width = self.sample_with or parser.sample_lng
+            height = self.sample_height or parser.sample_lat
+            return parser.get_sample_iterator(width, height)
+        else:
+            return parser.get_value_iterator()

@@ -5,21 +5,6 @@ import sqlalchemy.engine.url as sql_url
 import sqlalchemy.exc
 
 
-def create_engine(type_, pool_size=1, **db_info):
-    """ Create a sqlalchemy engine
-    
-    .. seealso:: supports all keywords arguments of constructor :class:`sqlalchemy.engine.url.URL`
-    
-    :param str type_: the type of engine (postgres, mysql) 
-    :param int pool_size: pool size of the engine (at least as much as the number of threads 
-        in :class:`gmaltcli.worker.WorkerPool`)
-    :return: a sqlalchemy engine
-    :rtype: :class:`sqlalchemy.engine.base.Engine`
-    """
-    uri = sql_url.URL(type_, **db_info)
-    return sqlalchemy_create_engine(uri, pool_size=pool_size)
-
-
 class ManagerRegistry(type):
     """ Python Registry pattern to store all manager.
     
@@ -62,11 +47,40 @@ class Manager(object):
         return ManagerRegistry.get_manager_class(db_driver, use_raster)(*args, **kwargs)
 
 
+class ManagerFactory(object):
+    """ This class provides a factory of :class:`gmaltcli.database.BaseManager`
+    
+    .. seealso: :func:`gmaltcli.database.ManagerBuilder.__create_engine` for details on constructor args
+    """
+    def __init__(self, type_, table_name, pool_size=1, **db_info):
+        self.db_driver = type_
+        self.table_name = table_name
+        self.engine = self.__create_engine(type_, pool_size=pool_size, **db_info)
+
+    @staticmethod
+    def __create_engine(type_, pool_size=1, **db_info):
+        """ Create a sqlalchemy engine
+        
+        .. seealso:: supports all keywords arguments of constructor :class:`sqlalchemy.engine.url.URL`
+        
+        :param str type_: the type of engine (postgres, mysql)
+        :param int pool_size: pool size of the engine (at least as much as the number of threads
+            in :class:`gmaltcli.worker.WorkerPool`)
+        :return: a sqlalchemy engine
+        :rtype: :class:`sqlalchemy.engine.base.Engine`
+        """
+        uri = sql_url.URL(type_, **db_info)
+        return sqlalchemy_create_engine(uri, pool_size=pool_size)
+
+    def get_manager(self, use_raster=False):
+        return Manager(self.db_driver, use_raster, self.engine.connect(), self.table_name)
+
+
 class BaseManager(object):
     TYPE = None
 
-    def __init__(self, engine, table_name):
-        self.connection = engine.connect()
+    def __init__(self, connection, table_name):
+        self.connection = connection
         self.table_name = table_name
 
     def __enter__(self):
@@ -113,44 +127,41 @@ class BaseManager(object):
 class BasePostgresManager(BaseManager):
     TYPE = 'postgres'
 
-    TABLE_EXISTS_QUERY = """ 
-          SELECT EXISTS(
-            SELECT  1 
-            FROM    information_schema.tables 
-            WHERE   table_name=%(table_name)s
-          ) """
+    TABLE_EXISTS_QUERY = ("SELECT EXISTS("
+                          "    SELECT  1"
+                          "    FROM    information_schema.tables"
+                          "    WHERE   table_name=%(table_name)s"
+                          ")")
 
 
 class PostgresManager(BasePostgresManager):
     __metaclass__ = ManagerRegistry
     USE_RASTER = False
 
-    TABLE_CREATE_QUERY = """
-            CREATE TABLE "{table_name}" (
-                lat_min DOUBLE PRECISION,
-                lng_min DOUBLE PRECISION, 
-                lat_max DOUBLE PRECISION,
-                lng_max DOUBLE PRECISION,
-                "value" SMALLINT,
-                PRIMARY KEY (lat_min, lng_min, lat_max, lng_max)
-            ); """
+    TABLE_CREATE_QUERY = ("CREATE TABLE \"{table_name}\" ("
+                          "    lat_min DOUBLE PRECISION,"
+                          "    lng_min DOUBLE PRECISION,"
+                          "    lat_max DOUBLE PRECISION,"
+                          "    lng_max DOUBLE PRECISION,"
+                          "    \"value\" SMALLINT,"
+                          "    PRIMARY KEY (lat_min, lng_min, lat_max, lng_max)"
+                          ");")
 
 
 class PostgresRasterManager(BasePostgresManager):
     __metaclass__ = ManagerRegistry
     USE_RASTER = True
 
-    TABLE_CREATE_QUERY = """
-            CREATE TABLE "{table_name}" ("rid" serial PRIMARY KEY,"rast" raster);
-            CREATE INDEX "{table_name}_rast_gist_idx" ON "{table_name}" USING gist (st_convexhull("rast"));
-        """
+    TABLE_CREATE_QUERY = ("CREATE TABLE \"{table_name}\" (\"rid\" serial PRIMARY KEY,\"rast\" raster);"
+                          "CREATE INDEX \"{table_name}_rast_gist_idx\" "
+                          "ON           \"{table_name}\" "
+                          "USING gist   (st_convexhull(\"rast\"));")
 
-    POSTGIS_AVAILABLE_QUERY = """
-            SELECT EXISTS(
-                SELECT  1
-                FROM    pg_extension 
-                WHERE   extname='postgis'
-              ) """
+    POSTGIS_AVAILABLE_QUERY = ("SELECT EXISTS("
+                               "    SELECT  1"
+                               "    FROM    pg_extension"
+                               "    WHERE   extname='postgis'"
+                               ")")
 
     def is_compatible(self):
         return self._execute(self.POSTGIS_AVAILABLE_QUERY, method='scalar')

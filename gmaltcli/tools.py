@@ -102,17 +102,20 @@ def extract_hgt_zip_files(working_dir, concurrency, skip=False):
     logging.debug('Extract end')
 
 
-def import_hgt_zip_files(working_dir, concurrency, **db_connection):
-    """ Extract the HGT zip files in working_dir
+def import_hgt_zip_files(working_dir, concurrency, factory, use_raster, samples):
+    """ Import the extracted HGT files found in working_dir
 
-    :param str working_dir: folder where the zip files are
+    :param str working_dir: folder where the hgt files are
     :param int concurrency: number of worker to start
-    :param bool skip: if True skip this step
+    :param factory: :class:`gmaltcli.database.Manager` factory
+    :type factory: :class:`gmaltcli.database.ManagerFactory`
+    :param bool use_raster: if True, the manager will import data as raster (in GIS extension in database)
+    :param tuple samples: tuple with raster sampling on lng and lat
     """
     hgt_files = [os.path.realpath(filename) for filename in glob.glob(os.path.join(working_dir, "*.hgt"))]
     logging.info('Nb of files to import : {}'.format(len(hgt_files)))
     logging.debug('Import start')
-    import_task = worker.WorkerPool(worker.ImportWorker, concurrency, working_dir, **db_connection)
+    import_task = worker.WorkerPool(worker.ImportWorker, concurrency, working_dir, factory, use_raster, samples)
     import_task.fill(hgt_files)
     import_task.start()
     logging.debug('Import end')
