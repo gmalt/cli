@@ -56,7 +56,6 @@ def test_create_get_hgt_parser_minimal_args(tmpdir):
     assert parsed.concurrency == 1
     assert parsed.dataset.endswith('gmaltcli/datasets/small.json')
     assert len(parsed.dataset_files) == 3
-    assert parsed.dataset_sampling == 1201
     assert parsed.folder.endswith('working_dir')
     assert not parsed.skip_download
     assert not parsed.skip_unzip
@@ -70,7 +69,6 @@ def test_create_get_hgt_parser_all_args(tmpdir):
     assert parsed.concurrency == 2
     assert parsed.dataset.endswith('gmaltcli/datasets/small.json')
     assert len(parsed.dataset_files) == 3
-    assert parsed.dataset_sampling == 1201
     assert parsed.folder.endswith('working_dir')
     assert parsed.skip_download
     assert parsed.skip_unzip
@@ -78,8 +76,7 @@ def test_create_get_hgt_parser_all_args(tmpdir):
 
 
 def test_create_get_hgt_parser_dataset_as_file(tmpdir):
-    false_dataset = {'sampling': 321,
-                     'files': {
+    false_dataset = {'files': {
                         'file1.hgt': {
                             'url': 'http://my.url.fr/file1.hgt.zip',
                             'zip': 'file1.hgt.zip'
@@ -92,7 +89,6 @@ def test_create_get_hgt_parser_dataset_as_file(tmpdir):
     parsed = parser.parse_args([str(tmp_dataset), str(tmp_working_dir)])
     assert parsed.dataset.endswith('dataset/customset.json')
     assert len(parsed.dataset_files) == 1
-    assert parsed.dataset_sampling == 321
     assert parsed.folder.endswith('working_dir')
 
 

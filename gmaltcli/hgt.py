@@ -1,6 +1,7 @@
 import os
 import re
 import struct
+import math
 
 
 class HgtParser(object):
@@ -12,25 +13,25 @@ class HgtParser(object):
             parser.get_elevation((lat, lng))
 
     :param str filepath: the path to the HGT file to parse
-    :param int sample_lat: the number of values on the latitude axis
-    :param int sample_lng: the number of values on the latitude axis
     """
 
-    def __init__(self, filepath, sample_lat=1201, sample_lng=1201):
+    def __init__(self, filepath):
+        if not os.path.exists(filepath):
+            raise Exception('file {} not found'.format(filepath))
+
         self.file = None
         self.filepath = filepath
         self.filename = os.path.basename(filepath)
+        sample = int(math.sqrt(os.path.getsize(filepath) / 2))
 
-        self.sample_lat = sample_lat
-        self.sample_lng = sample_lng
+        self.sample_lat = sample
+        self.sample_lng = sample
 
         self.bottom_left_center = self._get_bottom_left_center(self.filename)
         self.corners = self._get_corners_from_filename(self.bottom_left_center)
         self.top_left_square = self._get_top_left_square()
 
     def __enter__(self):
-        if not os.path.exists(self.filepath):
-            raise Exception('file {} not found'.format(self.filepath))
         self.file = open(self.filepath, 'rb')
         return self
 

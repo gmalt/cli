@@ -220,7 +220,7 @@ class TestExtractWorker(object):
     def test__extract_file(self, tmpdir):
         tmp_folder = str(tmpdir.mkdir('gmaltcli'))
         self.extract_worker.folder = tmp_folder
-        zip_file = os.path.realpath(os.path.join(os.path.dirname(__file__), 'N00E010.hgt.zip'))
+        zip_file = os.path.realpath(os.path.join(os.path.dirname(__file__), 'srtm3', 'N00E010.hgt.zip'))
 
         self.extract_worker._extract_file(zip_file)
 

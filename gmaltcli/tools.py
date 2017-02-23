@@ -45,8 +45,8 @@ def writable_folder(folder_path):
 class LoadDatasetAction(argparse.Action):
     """ Load a dataset from a json file
 
-    .. note:: this action adds 2 keywords to the :class:`argparse.Namespace` : `dataset_sampling` to indicate if
-        we are loading srtm1 or srtm3 data and `dataset_files` which is a dict of all HGT files in this dataset
+    .. note:: this action adds a keyword to the :class:`argparse.Namespace` : `dataset_files` which is a dict of 
+        all HGT files in this dataset
     """
 
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
@@ -58,7 +58,6 @@ class LoadDatasetAction(argparse.Action):
         setattr(namespace, self.dest, values)
         with open(values) as dataset_file:
             data = json.load(dataset_file)
-        setattr(namespace, 'dataset_sampling', data['sampling'])
         setattr(namespace, 'dataset_files', data['files'])
 
 

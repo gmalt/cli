@@ -46,9 +46,6 @@ class TestLoadDatasetAction(object):
         assert hasattr(namespace, 'dataset')
         assert namespace.dataset.endswith('small.json')
 
-        assert hasattr(namespace, 'dataset_sampling')
-        assert namespace.dataset_sampling == 1201
-
         assert hasattr(namespace, 'dataset_files')
         assert len(namespace.dataset_files) == 3
 
