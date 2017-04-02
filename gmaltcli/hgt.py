@@ -2,6 +2,7 @@ import os
 import re
 import struct
 import math
+import fractions
 
 
 class HgtParser(object):
@@ -27,6 +28,18 @@ class HgtParser(object):
         self.sample_lat = sample
         self.sample_lng = sample
 
+        # the width (length on the longitude axis) of a square providing one elevation value
+        self.square_width = fractions.Fraction(1, self.sample_lng - 1)
+
+        # the height (length on the latitude axis) of a square providing one elevation value
+        self.square_height = fractions.Fraction(1, self.sample_lat - 1)
+
+        # the total width of the HGT file
+        self.area_width = 1 + self.square_width
+
+        # the total height of the HGT file
+        self.area_height = 1 + self.square_height
+
         self.bottom_left_center = self._get_bottom_left_center(self.filename)
         self.corners = self._get_corners_from_filename(self.bottom_left_center)
         self.top_left_square = self._get_top_left_square()
@@ -40,11 +53,11 @@ class HgtParser(object):
             self.file.close()
             self.file = None
 
-    def get_value_iterator(self):
-        return HgtValueIterator(self)
+    def get_value_iterator(self, as_float=True):
+        return HgtValueIterator(self, as_float=as_float)
 
-    def get_sample_iterator(self, width, height):
-        return HgtSampleIterator(self, width, height)
+    def get_sample_iterator(self, width, height, as_float=True):
+        return HgtSampleIterator(self, width, height, as_float=as_float)
 
     def _get_top_left_square(self):
         """ Get the corners of the top left square in the HGT file
@@ -103,42 +116,6 @@ class HgtParser(object):
             shifted += ((corner[0] - line * self.square_height, corner[1] + col * self.square_width),)
         return shifted
 
-    @property
-    def square_width(self):
-        """ Provide the width (length on the longitude axis) of a square providing one elevation value
-
-        :return: the width of a square with one elevation value
-        :rtype: float
-        """
-        return 1.0 / (self.sample_lng - 1)
-
-    @property
-    def square_height(self):
-        """ Provide the height (length on the latitude axis) of a square providing one elevation value
-
-        :return: the height of a square with one elevation value
-        :rtype: float
-        """
-        return 1.0 / (self.sample_lat - 1)
-
-    @property
-    def area_width(self):
-        """ Provide the total width of the HGT file
-
-        :return: the total width of the HGT file
-        :rtype: float
-        """
-        return 1.0 + self.square_width
-
-    @property
-    def area_height(self):
-        """ Provide the total height of the HGT file
-
-        :return: the total height of the HGT file
-        :rtype: float
-        """
-        return 1.0 + self.square_height
-
     @staticmethod
     def _get_bottom_left_center(filename):
         """ Extract the latitude and longitude of the center of the bottom left elevation
@@ -156,8 +133,8 @@ class HgtParser(object):
 
         lat_order, lat_left_bottom_center, lng_order, lng_left_bottom_center = result.groups()
 
-        lat_left_bottom_center = float(lat_left_bottom_center)
-        lng_left_bottom_center = float(lng_left_bottom_center)
+        lat_left_bottom_center = fractions.Fraction(int(lat_left_bottom_center), 1)
+        lng_left_bottom_center = fractions.Fraction(int(lng_left_bottom_center), 1)
         if lat_order == 'S':
             lat_left_bottom_center *= -1
         if lng_order == 'W':
@@ -251,16 +228,44 @@ class HgtParser(object):
         return lat_idx, lng_idx, self.get_value(idx)
 
 
-class HgtValueIterator(object):
+class HgtBaseIterator(object):
+    """ Base iterator to share methods 
+    
+    :param bool as_float: if True returns square cornes as float else as :class:`fractions.Fraction`
+    """
+    def __init__(self, as_float=True):
+        self.as_float = as_float
+
+    def to_float(self, value):
+        """ Convert a :class:`fractions.Fraction` to a float if `as_float` is True
+        
+        :param value: the fraction to convert
+        :type value: :class:`fractions.Fraction`
+        :return: the converted value
+        :rtype: :class:`fractions.Fraction` or float
+        """
+        return float(value) if self.as_float else value
+
+    def format_corners(self, corners):
+        """ """
+        square = ()
+        for corner in corners:
+            square += ((self.to_float(corner[0]), self.to_float(corner[1])),)
+        return square
+
+
+class HgtValueIterator(HgtBaseIterator):
     """ Iterator over all the elevation values in the file
 
     :param parser: a HgtParser instance
     :type parser: :class:`gmaltcli.hgt.HgtParser`
+    :param bool as_float: if True converts fraction to float
     :return: tuple with (line number, column number, zero based index, square corners of the elevation value,
     elevation value)
     :rtype: (int, int, int, ((float, float), (float, float), (float, float), (float, float)), int)
     """
-    def __init__(self, parser):
+    def __init__(self, parser, as_float=True):
+        super(HgtValueIterator, self).__init__(as_float=as_float)
         self.parser = parser
 
     def __iter__(self):
@@ -268,23 +273,25 @@ class HgtValueIterator(object):
         while idx < self.parser.sample_lat * self.parser.sample_lng:
             line, col = divmod(idx, self.parser.sample_lng)
             square = self.parser.shift_first_square(line, col)
-            yield line + 1, col + 1, idx, square, self.parser.get_value(idx)
+            yield line + 1, col + 1, idx, self.format_corners(square), self.parser.get_value(idx)
             idx += 1
         raise StopIteration
 
 
-class HgtSampleIterator(object):
+class HgtSampleIterator(HgtBaseIterator):
     """ Iterator over samples. For example 50x50 values per 50x50
 
     :param parser: a HgtParser instance
     :type parser: :class:`gmaltcli.hgt.HgtParser`
     :param int width: width of the sample area
     :param int height: height of the sample area
+    :param bool as_float: if True converts fraction to float
     :return: tuple with (line number of top left corner, column number of top left corner,
     zero based index of top left corner, square corners position, list of all elevation values in square line per line)
     :rtype: (int, int, int, ((float, float), (float, float), (float, float), (float, float)), int[][)
     """
-    def __init__(self, parser, width, height):
+    def __init__(self, parser, width, height, as_float=True):
+        super(HgtSampleIterator, self).__init__(as_float=as_float)
         self.parser = parser
         self.width = width
         self.height = height
@@ -312,7 +319,7 @@ class HgtSampleIterator(object):
                     top_left_line_idx,
                     top_left_col_idx,
                     self.parser.get_idx(top_left_col_idx, top_left_line_idx),
-                    square_corners,
+                    self.format_corners(square_corners),
                     values
                 )
         raise StopIteration

@@ -1,6 +1,7 @@
 import collections
 import struct
 import os
+from fractions import Fraction
 
 import pytest
 
@@ -41,35 +42,35 @@ class TestHgtParser(object):
 
     def test_get_top_left_square(self, srtm3_hgt):
         corners = (
-            (0.9995833333333332, 9.999583333333334),
-            (1.0004166666666665, 9.999583333333334),
-            (1.0004166666666665, 10.000416666666666),
-            (0.9995833333333332, 10.000416666666666)
+            (Fraction(2399, 2400), Fraction(23999, 2400)),  # (0.9995833333333334, 9.999583333333334)
+            (Fraction(2401, 2400), Fraction(23999, 2400)),  # (1.0004166666666667, 9.999583333333334)
+            (Fraction(2401, 2400), Fraction(24001, 2400)),  # (1.0004166666666667, 10.000416666666666)
+            (Fraction(2399, 2400), Fraction(24001, 2400))  # (0.9995833333333334, 10.000416666666666)
         )
         assert srtm3_hgt._get_top_left_square() == corners
 
     def test_shift_first_square(self, srtm3_hgt):
         corners = (
-            (0.9895833333333331, 9.999583333333334),
-            (0.9904166666666665, 9.999583333333334),
-            (0.9904166666666665, 10.000416666666666),
-            (0.9895833333333331, 10.000416666666666)
+            (Fraction(95, 96), Fraction(23999, 2400)),  # (0.9895833333333334, 9.999583333333334)
+            (Fraction(2377, 2400), Fraction(23999, 2400)),  # (0.9904166666666666, 9.999583333333334)
+            (Fraction(2377, 2400), Fraction(24001, 2400)),  # (0.9904166666666666, 10.000416666666666)
+            (Fraction(95, 96), Fraction(24001, 2400))  # (0.9895833333333334, 10.000416666666666)
         )
         assert srtm3_hgt.shift_first_square(12, 0) == corners
 
         corners = (
-            (0.9995833333333332, 10.009583333333333),
-            (1.0004166666666665, 10.009583333333333),
-            (1.0004166666666665, 10.010416666666666),
-            (0.9995833333333332, 10.010416666666666)
+            (Fraction(2399, 2400), Fraction(24023, 2400)),  # (0.9995833333333334, 10.009583333333333)
+            (Fraction(2401, 2400), Fraction(24023, 2400)),  # (1.0004166666666667, 10.009583333333333)
+            (Fraction(2401, 2400), Fraction(961, 96)),  # (1.0004166666666667, 10.010416666666666)
+            (Fraction(2399, 2400), Fraction(961, 96))  # (0.9995833333333334, 10.010416666666666)
         )
         assert srtm3_hgt.shift_first_square(0, 12) == corners
 
         corners = (
-            (0.8604166666666665, 10.89625),
-            (0.8612499999999998, 10.89625),
-            (0.8612499999999998, 10.897083333333333),
-            (0.8604166666666665, 10.897083333333333)
+            (Fraction(413, 480), Fraction(8717, 800)),  # (0.8604166666666667, 10.89625)
+            (Fraction(689, 800), Fraction(8717, 800)),  # (0.86125, 10.89625)
+            (Fraction(689, 800), Fraction(26153, 2400)),  # (0.86125, 10.897083333333333)
+            (Fraction(413, 480), Fraction(26153, 2400))  # (0.8604166666666667, 10.897083333333333)
         )
         assert srtm3_hgt.shift_first_square(167, 1076) == corners
 
@@ -81,42 +82,42 @@ class TestHgtParser(object):
         assert str(e.value) == "Out of bound line or col"
 
     def test_square_width_height(self, srtm3_hgt, srtm1_hgt):
-        assert srtm3_hgt.square_width == 0.0008333333333333334
-        assert srtm3_hgt.square_height == 0.0008333333333333334
+        assert srtm3_hgt.square_width == Fraction(1, 1200)  # 0.0008333333333333334
+        assert srtm3_hgt.square_height == Fraction(1, 1200)  # 0.0008333333333333334
 
-        assert srtm1_hgt.square_width == 0.0002777777777777778
-        assert srtm1_hgt.square_height == 0.0002777777777777778
+        assert srtm1_hgt.square_width == Fraction(1, 3600)  # 0.0002777777777777778
+        assert srtm1_hgt.square_height == Fraction(1, 3600)  # 0.0002777777777777778
 
     def test_area_width_height(self, srtm3_hgt, srtm1_hgt):
-        assert srtm3_hgt.area_width == 1.0008333333333332
-        assert srtm3_hgt.area_height == 1.0008333333333332
+        assert srtm3_hgt.area_width == Fraction(1201, 1200)  # 1.0008333333333332
+        assert srtm3_hgt.area_height == Fraction(1201, 1200)  # 1.0008333333333332
 
-        assert srtm1_hgt.area_width == 1.0002777777777778
-        assert srtm1_hgt.area_height == 1.0002777777777778
+        assert srtm1_hgt.area_width == Fraction(3601, 3600)  # 1.0002777777777778
+        assert srtm1_hgt.area_height == Fraction(3601, 3600)  # 1.0002777777777778
 
     def test_get_bottom_left_center(self, srtm3_hgt):
-        assert srtm3_hgt._get_bottom_left_center('N00E010.hgt') == (0.0, 10.0)
-        assert srtm3_hgt._get_bottom_left_center('S20W03.hgt') == (-20.0, -3.0)
-        assert srtm3_hgt._get_bottom_left_center('N01W001.hgt') == (1.0, -1.0)
+        assert srtm3_hgt._get_bottom_left_center('N00E010.hgt') == (0, 10)
+        assert srtm3_hgt._get_bottom_left_center('S20W03.hgt') == (-20, -3)
+        assert srtm3_hgt._get_bottom_left_center('N01W001.hgt') == (1, -1)
         with pytest.raises(Exception):
             srtm3_hgt._get_bottom_left_center('SF01AB001.hgt')
 
     def test_get_corners_from_filename(self, srtm3_hgt, srtm1_hgt):
         corners = (
-            (-0.0004166666666666667, 9.999583333333334),
-            (1.0004166666666665, 9.999583333333334),
-            (1.0004166666666665, 11.000416666666666),
-            (-0.0004166666666666667, 11.000416666666666)
+            (Fraction(-1, 2400), Fraction(23999, 2400)),  # (-0.0004166666666666667, 9.999583333333334)
+            (Fraction(2401, 2400), Fraction(23999, 2400)),  # (1.0004166666666667, 9.999583333333334)
+            (Fraction(2401, 2400), Fraction(26401, 2400)),  # (1.0004166666666667, 11.000416666666666)
+            (Fraction(-1, 2400), Fraction(26401, 2400))  # (-0.0004166666666666667, 11.000416666666666)
         )
-        assert srtm3_hgt._get_corners_from_filename((0.0, 10.0)) == corners
+        assert srtm3_hgt._get_corners_from_filename((0, 10)) == corners
 
         corners = (
-            (-0.0001388888888888889, 9.99986111111111),
-            (1.000138888888889, 9.99986111111111),
-            (1.000138888888889, 11.000138888888888),
-            (-0.0001388888888888889, 11.000138888888888)
+            (Fraction(-1, 7200), Fraction(71999, 7200)),  # (-0.0001388888888888889, 9.99986111111111)
+            (Fraction(7201, 7200), Fraction(71999, 7200)),  # (1.000138888888889, 9.99986111111111)
+            (Fraction(7201, 7200), Fraction(79201, 7200)),  # (1.000138888888889, 11.00013888888889)
+            (Fraction(-1, 7200), Fraction(79201, 7200))  # (-0.0001388888888888889, 11.00013888888889)
         )
-        assert srtm1_hgt._get_corners_from_filename((0.0, 10.0)) == corners
+        assert srtm1_hgt._get_corners_from_filename((0, 10)) == corners
 
     def test_is_inside(self, srtm3_hgt):
         assert srtm3_hgt.is_inside((0.5, 10.5))
@@ -174,17 +175,27 @@ class TestHgtValueIterator(object):
 
             assert len(values) == 1442401
             assert (1, 1, 0,
-                    ((0.9995833333333332, 9.999583333333334),
-                     (1.0004166666666665, 9.999583333333334),
-                     (1.0004166666666665, 10.000416666666666),
-                     (0.9995833333333332, 10.000416666666666)),
+                    ((0.9995833333333334, 9.999583333333334),
+                     (1.0004166666666667, 9.999583333333334),
+                     (1.0004166666666667, 10.000416666666666),
+                     (0.9995833333333334, 10.000416666666666)),
                     57) == values[0]
             assert (3, 1054, 3455,
-                    ((0.9979166666666665, 10.877083333333333),
-                     (0.9987499999999998, 10.877083333333333),
-                     (0.9987499999999998, 10.877916666666666),
-                     (0.9979166666666665, 10.877916666666666)),
+                    ((0.9979166666666667, 10.877083333333333),
+                     (0.99875, 10.877083333333333),
+                     (0.99875, 10.877916666666666),
+                     (0.9979166666666667, 10.877916666666666)),
                     516) == values[3455]
+
+    def test_iter_not_as_float(self, srtm3_hgt):
+        with srtm3_hgt as parser:
+            value = next(iter(parser.get_value_iterator(as_float=False)))
+            assert (1, 1, 0,
+                    ((Fraction(2399, 2400), Fraction(23999, 2400)),
+                     (Fraction(2401, 2400), Fraction(23999, 2400)),
+                     (Fraction(2401, 2400), Fraction(24001, 2400)),
+                     (Fraction(2399, 2400), Fraction(24001, 2400))),
+                    57) == value
 
 
 class TestHgtSampleIterator(object):
@@ -197,44 +208,56 @@ class TestHgtSampleIterator(object):
             assert square_values[0][0] == 0
             assert square_values[0][1] == 0
             assert square_values[0][2] == 0
-            assert square_values[0][3] == ((0.9587499999999999, 9.999583333333334),
-                                           (1.0004166666666665, 9.999583333333334),
-                                           (1.0004166666666665, 10.04125),
-                                           (0.9587499999999999, 10.04125))
+            assert square_values[0][3] == ((0.95875, 9.999583333333334),
+                                           (1.0004166666666667, 9.999583333333334),
+                                           (1.0004166666666667, 10.04125),
+                                           (0.95875, 10.04125))
             assert len([value for line in square_values[0][4] for value in line]) == 2500
 
             assert square_values[24][0] == 0
             assert square_values[24][1] == 1200
             assert square_values[24][2] == 1200
-            assert square_values[24][3] == ((0.9587499999999999, 10.999583333333334),
-                                            (1.0004166666666665, 10.999583333333334),
-                                            (1.0004166666666665, 11.000416666666666),
-                                            (0.9587499999999999, 11.000416666666666))
+            assert square_values[24][3] == ((0.95875, 10.999583333333334),
+                                            (1.0004166666666667, 10.999583333333334),
+                                            (1.0004166666666667, 11.000416666666666),
+                                            (0.95875, 11.000416666666666))
             assert len([value for line in square_values[24][4] for value in line]) == 50
 
             assert square_values[25][0] == 50
             assert square_values[25][1] == 0
             assert square_values[25][2] == 60050
-            assert square_values[25][3] == ((0.9170833333333333, 9.999583333333334),
-                                            (0.9587499999999999, 9.999583333333334),
-                                            (0.9587499999999999, 10.04125),
-                                            (0.9170833333333333, 10.04125))
+            assert square_values[25][3] == ((0.9170833333333334, 9.999583333333334),
+                                            (0.95875, 9.999583333333334),
+                                            (0.95875, 10.04125),
+                                            (0.9170833333333334, 10.04125))
             assert len([value for line in square_values[25][4] for value in line]) == 2500
 
             assert square_values[612][0] == 1200
             assert square_values[612][1] == 600
             assert square_values[612][2] == 1441800
-            assert square_values[612][3] == ((-0.00041666666666682363, 10.499583333333334),
-                                             (0.00041666666666650976, 10.499583333333334),
-                                             (0.00041666666666650976, 10.54125),
-                                             (-0.00041666666666682363, 10.54125))
+            assert square_values[612][3] == ((-0.0004166666666666667, 10.499583333333334),
+                                             (0.0004166666666666667, 10.499583333333334),
+                                             (0.0004166666666666667, 10.54125),
+                                             (-0.0004166666666666667, 10.54125))
             assert len([value for line in square_values[612][4] for value in line]) == 50
 
             assert square_values[624][0] == 1200
             assert square_values[624][1] == 1200
             assert square_values[624][2] == 1442400
-            assert square_values[624][3] == ((-0.00041666666666682363, 10.999583333333334),
-                                             (0.00041666666666650976, 10.999583333333334),
-                                             (0.00041666666666650976, 11.000416666666666),
-                                             (-0.00041666666666682363, 11.000416666666666))
+            assert square_values[624][3] == ((-0.0004166666666666667, 10.999583333333334),
+                                             (0.0004166666666666667, 10.999583333333334),
+                                             (0.0004166666666666667, 11.000416666666666),
+                                             (-0.0004166666666666667, 11.000416666666666))
             assert len([value for line in square_values[624][4] for value in line]) == 1
+
+    def test_iter_not_as_float(self, srtm3_hgt):
+        with srtm3_hgt as parser:
+            value = next(iter(parser.get_sample_iterator(50, 50, as_float=False)))
+            assert value[0] == 0
+            assert value[1] == 0
+            assert value[2] == 0
+            assert value[3] == ((Fraction(767, 800), Fraction(23999, 2400)),
+                                (Fraction(2401, 2400), Fraction(23999, 2400)),
+                                (Fraction(2401, 2400), Fraction(8033, 800)),
+                                (Fraction(767, 800), Fraction(8033, 800)))
+            assert len([value for line in value[4] for value in line]) == 2500
