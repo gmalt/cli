@@ -303,8 +303,14 @@ class ImportWorker(Worker):
                 self._execute_import(elev_iter, manager)
 
     def _execute_import(self, elev_iter, manager):
+        """ Method called to import the data from a HGT iterator 
+        
+        :param iter elev_iter: iterator of elevation HGT data
+        :param manager: manager to import data into database
+        :type manager: :class:`gmaltcli.database.BaseManager`
+        """
         for value in elev_iter:
-            print(value)
+            manager.insert_or_update(value)
 
     def _get_iterator(self, parser):
         if self.use_raster:

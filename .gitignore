@@ -94,3 +94,6 @@ tools/*.json
 
 # tmp working dir
 tmp
+
+# IDE
+.idea

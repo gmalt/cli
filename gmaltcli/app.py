@@ -199,7 +199,8 @@ def load_hgt():
         # Then process HGT files
         tools.import_hgt_zip_files(folder, concurrency, factory, use_raster, samples)
     except sqlalchemy.exc.OperationalError:
-        logging.error('Unable to connect to database with these settings : {}'.format(engine.url), exc_info=traceback)
+        logging.error('Unable to connect to database with these settings : {}'.format(factory.engine.url),
+                      exc_info=traceback)
     except Exception as e:
         logging.error('Unknown error : {}'.format(str(e)), exc_info=traceback)
 

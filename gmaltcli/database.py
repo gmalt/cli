@@ -36,10 +36,10 @@ class ManagerRegistry(type):
 class Manager(object):
     def __new__(cls, db_driver, use_raster, *args, **kwargs):
         """ Not really useful but I wanted to try a class which returns an object of another 
-        type on instanciation.
+        type on instantiation.
         
         Here it uses the :class:`gmaltcli.database.ManagerRegistry` to return the right manager when
-        developer instanciates the Manager.
+        developer instantiates the Manager.
         
         :return: a manager object
         :rtype: :class:`gmaltcli.database.BaseManager`
@@ -120,8 +120,20 @@ class BaseManager(object):
     def is_compatible(self):
         return True
 
-    def insert_or_update(self):
-        raise Exception('to be implemented in child class')
+    def insert_or_update(self, data):
+        params = {
+            'lat_min': min([corner[0] for corner in data[3]]),
+            'lat_max': max([corner[0] for corner in data[3]]),
+            'lng_min': min([corner[1] for corner in data[3]]),
+            'lng_max': max([corner[1] for corner in data[3]]),
+        }
+        params.update({'table_name': self.table_name})
+        value_exists = self._execute(self.VALUE_EXIST_QUERY, params, method='scalar')
+        if not value_exists:
+            params.update({'value': data[4]})
+            self._execute(self.VALUE_CREATE_QUERY, params, method='scalar')
+
+        #raise Exception('to be implemented in child class')
 
 
 class BasePostgresManager(BaseManager):
@@ -146,6 +158,16 @@ class PostgresManager(BasePostgresManager):
                           "    \"value\" SMALLINT,"
                           "    PRIMARY KEY (lat_min, lng_min, lat_max, lng_max)"
                           ");")
+
+    VALUE_EXIST_QUERY = ("SELECT 1"
+                         "FROM   \"{table_name}\""
+                         "WHERE  lat_min=%(lat_min)s"
+                         "       AND lng_min=%(lng_min)s"
+                         "       AND lat_max=%(lat_max)s"
+                         "       AND lng_max=%(lng_max)s;")
+
+    VALUE_CREATE_QUERY = ("INSERT INTO \"{table_name}\" (lat_min, lng_min, lat_max, lng_max, \"value\") "
+                          "VALUES (%(lat_min)s, %(lng_min)s, %(lat_max)s, %(lng_max)s, %(value)s)")
 
 
 class PostgresRasterManager(BasePostgresManager):
