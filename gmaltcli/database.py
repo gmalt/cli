@@ -15,7 +15,6 @@ class ManagerRegistry(type):
     REGISTRY = {}
 
     def __new__(cls, *args, **kwargs):
-        # new_cls = type.__new__(cls, *args, **kwargs)
         new_cls = type.__new__(cls, *args, **kwargs)
         cls.REGISTRY[(new_cls.TYPE, new_cls.USE_RASTER)] = new_cls
         return new_cls
@@ -78,6 +77,7 @@ class ManagerFactory(object):
 
 class BaseManager(object):
     TYPE = None
+    USE_RASTER = None
 
     def __init__(self, connection, table_name):
         self.connection = connection
@@ -91,6 +91,7 @@ class BaseManager(object):
 
     def _execute(self, query, params=None, method='fetchall'):
         params = params if params is not None else {}
+        params.update({'table_name': self.table_name})
         with self.connection.begin():
             result = self.connection.execute(query.format(**params), params)
             if result.returns_rows:
@@ -99,10 +100,10 @@ class BaseManager(object):
                 return None
 
     def table_exists(self):
-        return self._execute(self.TABLE_EXISTS_QUERY, {'table_name': self.table_name}, method='scalar')
+        return self._execute(self.TABLE_EXISTS_QUERY, method='scalar')
 
     def create_table(self):
-        return self._execute(self.TABLE_CREATE_QUERY, {'table_name': self.table_name})
+        return self._execute(self.TABLE_CREATE_QUERY)
 
     def prepare_environment(self):
         if not self.is_compatible():
@@ -121,34 +122,35 @@ class BaseManager(object):
         return True
 
     def insert_or_update(self, data):
+        raise Exception('to be implemented in child class')
+
+
+class BaseValueManager(BaseManager):
+    USE_RASTER = False
+
+    def insert_or_update(self, data):
         params = {
             'lat_min': min([corner[0] for corner in data[3]]),
             'lat_max': max([corner[0] for corner in data[3]]),
             'lng_min': min([corner[1] for corner in data[3]]),
             'lng_max': max([corner[1] for corner in data[3]]),
         }
-        params.update({'table_name': self.table_name})
         value_exists = self._execute(self.VALUE_EXIST_QUERY, params, method='scalar')
         if not value_exists:
             params.update({'value': data[4]})
             self._execute(self.VALUE_CREATE_QUERY, params, method='scalar')
 
-        #raise Exception('to be implemented in child class')
 
-
-class BasePostgresManager(BaseManager):
+class PostgresValueManager(BaseValueManager):
+    __metaclass__ = ManagerRegistry
     TYPE = 'postgres'
+    USE_RASTER = False
 
     TABLE_EXISTS_QUERY = ("SELECT EXISTS("
                           "    SELECT  1"
                           "    FROM    information_schema.tables"
                           "    WHERE   table_name=%(table_name)s"
                           ")")
-
-
-class PostgresManager(BasePostgresManager):
-    __metaclass__ = ManagerRegistry
-    USE_RASTER = False
 
     TABLE_CREATE_QUERY = ("CREATE TABLE \"{table_name}\" ("
                           "    lat_min DOUBLE PRECISION,"
@@ -170,9 +172,16 @@ class PostgresManager(BasePostgresManager):
                           "VALUES (%(lat_min)s, %(lng_min)s, %(lat_max)s, %(lng_max)s, %(value)s)")
 
 
-class PostgresRasterManager(BasePostgresManager):
+class PostgresRasterManager(BaseManager):
     __metaclass__ = ManagerRegistry
+    TYPE = 'postgres'
     USE_RASTER = True
+
+    TABLE_EXISTS_QUERY = ("SELECT EXISTS("
+                          "    SELECT  1"
+                          "    FROM    information_schema.tables"
+                          "    WHERE   table_name=%(table_name)s"
+                          ")")
 
     TABLE_CREATE_QUERY = ("CREATE TABLE \"{table_name}\" (\"rid\" serial PRIMARY KEY,\"rast\" raster);"
                           "CREATE INDEX \"{table_name}_rast_gist_idx\" "
