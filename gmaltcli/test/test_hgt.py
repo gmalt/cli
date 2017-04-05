@@ -40,6 +40,10 @@ class TestHgtParser(object):
         assert isinstance(srtm3_hgt.get_value_iterator(), collections.Iterable)
         assert isinstance(srtm3_hgt.get_sample_iterator(50, 50), collections.Iterable)
 
+    def test_nb_values(self, srtm1_hgt, srtm3_hgt):
+        assert srtm1_hgt.nb_values == 12967201
+        assert srtm3_hgt.nb_values == 1442401
+
     def test_get_top_left_square(self, srtm3_hgt):
         corners = (
             (Fraction(2399, 2400), Fraction(23999, 2400)),  # (0.9995833333333334, 9.999583333333334)

@@ -59,6 +59,14 @@ class HgtParser(object):
     def get_sample_iterator(self, width, height, as_float=True):
         return HgtSampleIterator(self, width, height, as_float=as_float)
 
+    @property
+    def nb_values(self):
+        """  
+        :return: the total number of values in the file 
+        :rtype: int
+        """
+        return self.sample_lat * self.sample_lng
+
     def _get_top_left_square(self):
         """ Get the corners of the top left square in the HGT file
 

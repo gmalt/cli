@@ -196,15 +196,28 @@ class Worker(threading.Thread):
         """ Executed when the worker ends """
         pass
 
-    def _log_debug(self, message, params=None):
+    def _log(self, level, message, params=None, prefix=None):
+        prefix = prefix if prefix is not None else self.__class__.__name__
+        message = message % params if params else message
+        logging.log(level, '%s %d %s' % (prefix, self.id, message))
+
+    def _log_debug(self, message, params=None, prefix=None):
         """ Helper method to log debug message or exception. It adds a
         prefix with the name of the class and the id of the thread
 
         :param str message: the message to print
         :param tuple params: the params to format the `message`
         """
-        message = message % params if params else message
-        logging.debug('%s %d %s' % (self.__class__.__name__, self.id, message))
+        self._log(logging.DEBUG, message, params, prefix)
+
+    def _log_info(self, message, params=None, prefix=None):
+        """ Helper method to log info message. It adds a
+        prefix with the name of the class and the id of the thread
+
+        :param str message: the message to print
+        :param tuple params: the params to format the `message`
+        """
+        self._log(logging.INFO, message, params, prefix)
 
 
 class DownloadWorker(Worker):
@@ -216,7 +229,7 @@ class DownloadWorker(Worker):
 
     def process(self, queue_item, counter_info):
         self._log_debug('downloading %s', (queue_item['url'],))
-        logging.info('Downloading file %d/%d' % counter_info)
+        self._log_info('Downloading file %d/%d', counter_info, prefix='download')
         self._secured_download_file(queue_item['url'], queue_item['zip'])
         self._log_debug('downloaded %s', (queue_item['url'],))
 
@@ -263,7 +276,7 @@ class ExtractWorker(Worker):
 
     def process(self, queue_item, counter_info):
         self._log_debug('extracting %s', (queue_item,))
-        logging.info('Extracting file %d/%d' % counter_info)
+        self._log_info('Extracting file %d/%d' % counter_info, prefix='extract')
         self._extract_file(queue_item)
         self._log_debug('extracted %s', (queue_item,))
 
@@ -288,8 +301,14 @@ class ImportWorker(Worker):
         self.sample_with, self.sample_height = samples
 
     def process(self, queue_item, counter_info):
+        """ Import one HGT file
+        
+        :param str queue_item: the HGT filepath to import
+        :param counter_info: the counter for the current queue
+        :type counter_info: :class:`gmaltcli.worker.SafeCounter`
+        """
         self._log_debug('importing %s', (queue_item,))
-        logging.info('Importing file %d/%d' % counter_info)
+        self._log_info('Importing file %d/%d' % counter_info, prefix='import')
         self._import_file(queue_item)
 
     def _import_file(self, filepath):
@@ -302,6 +321,21 @@ class ImportWorker(Worker):
                 elev_iter = self._get_iterator(parser)
                 self._execute_import(elev_iter, manager)
 
+    def _get_iterator(self, parser):
+        """ Get the right HTML iterator for the import task
+        
+        :param parser: the HGT parser for the file
+        :type parser: :class:`gmaltcli.hgt.HgtParser`
+        :return: a HGT iterator
+        :rtype: iter
+        """
+        if self.use_raster:
+            width = self.sample_with or parser.sample_lng
+            height = self.sample_height or parser.sample_lat
+            return parser.get_sample_iterator(width, height)
+        else:
+            return parser.get_value_iterator()
+
     def _execute_import(self, elev_iter, manager):
         """ Method called to import the data from a HGT iterator 
         
@@ -309,13 +343,20 @@ class ImportWorker(Worker):
         :param manager: manager to import data into database
         :type manager: :class:`gmaltcli.database.BaseManager`
         """
-        for value in elev_iter:
-            manager.insert_or_update(value)
+        total = elev_iter.parser.nb_values
+        processed = 0
+        last_percentage = 0
 
-    def _get_iterator(self, parser):
-        if self.use_raster:
-            width = self.sample_with or parser.sample_lng
-            height = self.sample_height or parser.sample_lat
-            return parser.get_sample_iterator(width, height)
-        else:
-            return parser.get_value_iterator()
+        for value in elev_iter:
+            # Break import task if an error occured in another thread or if KeyboardInterrupt
+            if self.stop_event.is_set():
+                break
+
+            manager.insert_or_update(value)
+            processed += 1
+
+            # Display progress as percentage
+            percents = float(processed) / total * 100
+            if int(percents) != last_percentage:
+                self._log_info("{0:.0f}% {1}/{2}".format(percents, processed, total), prefix='import')
+                last_percentage = int(percents)
