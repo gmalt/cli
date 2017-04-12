@@ -5,11 +5,16 @@ python:
   - "3.4"
   - "3.5"
 
+services:
+  - postgresql
+
 install:
   - python setup.py develop
 
 before_script:
     - "TMPDIR=`mktemp -d`"
+    - psql -c 'create database hgt_test;' -U postgres
+    - psql -U postgres -d hgt_test -c "create extension postgis;"
 
 script:
   - python setup.py test
@@ -26,3 +31,5 @@ script:
   - "ls $TMPDIR | grep '^N00E009.hgt.zip$'"
   - "ls $TMPDIR | grep '^N00E009.hgt$'"
   - "md5sum -b $TMPDIR/N00E009.hgt | grep '0dc319cb922bac1b7ccefa0b55688a51'"
+  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation gmaltcli/test/import/"
+  - psql -U postgres -d hgt_test -c "SELECT COUNT(*) FROM elevation;"
