@@ -352,7 +352,10 @@ class ImportWorker(Worker):
             if self.stop_event.is_set():
                 break
 
-            manager.insert_or_update(value)
+            # Don't import void elevation values
+            if value[4] != elev_iter.parser.VOID_VALUE:
+                manager.insert_or_update(value)
+
             processed += 1
 
             # Display progress as percentage

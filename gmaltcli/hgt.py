@@ -16,6 +16,8 @@ class HgtParser(object):
     :param str filepath: the path to the HGT file to parse
     """
 
+    VOID_VALUE = -32768
+
     def __init__(self, filepath):
         if not os.path.exists(filepath):
             raise Exception('file {} not found'.format(filepath))
