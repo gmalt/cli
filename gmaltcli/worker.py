@@ -356,9 +356,8 @@ class ImportWorker(Worker):
             if value[4] != elev_iter.parser.VOID_VALUE:
                 manager.insert_or_update(value)
 
-            processed += 1
-
             # Display progress as percentage
+            processed += 1
             percents = float(processed) / total * 100
             if int(percents) != last_percentage:
                 self._log_info("{0:.0f}% {1}/{2}".format(percents, processed, total), prefix='import')

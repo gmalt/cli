@@ -17,7 +17,7 @@ setup(
     url="http://github.com/gmalt/gmaltcli",
     packages=find_packages(exclude=["test"]),
     long_description=read('README.md'),
-    install_requires=['SQLAlchemy', 'psycopg2'],
+    install_requires=['SQLAlchemy', 'psycopg2', 'future'],
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'flake8', 'mock'],
     extras_require={

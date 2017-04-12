@@ -1,5 +1,6 @@
 import logging
 
+from future.utils import with_metaclass
 from sqlalchemy import create_engine as sqlalchemy_create_engine
 import sqlalchemy.engine.url as sql_url
 import sqlalchemy.exc
@@ -141,8 +142,7 @@ class BaseValueManager(BaseManager):
             self._execute(self.VALUE_CREATE_QUERY, params, method='scalar')
 
 
-class PostgresValueManager(BaseValueManager):
-    __metaclass__ = ManagerRegistry
+class PostgresValueManager(with_metaclass(ManagerRegistry, BaseValueManager)):
     TYPE = 'postgres'
     USE_RASTER = False
 
@@ -172,8 +172,7 @@ class PostgresValueManager(BaseValueManager):
                           "VALUES (%(lat_min)s, %(lng_min)s, %(lat_max)s, %(lng_max)s, %(value)s)")
 
 
-class PostgresRasterManager(BaseManager):
-    __metaclass__ = ManagerRegistry
+class PostgresRasterManager(with_metaclass(ManagerRegistry, BaseManager)):
     TYPE = 'postgres'
     USE_RASTER = True
 
