@@ -15,10 +15,11 @@ before_script:
     - "TMPDIR=`mktemp -d`"
     - psql -c 'create database hgt_test;' -U postgres
     - psql -U postgres -d hgt_test -c "create extension postgis;"
+    - pip install flake8
 
 script:
   - python setup.py test
-  - python -m flake8 gmaltcli
+  - flake8 gmaltcli
   - "gmalt-hgtread 1.0001 10.0001 gmaltcli/test/srtm3/N00E010.hgt | grep \"Value: 57\""
   - "gmalt-hgtread 1.0001 10.0001 gmaltcli/test/srtm3/N00E010.hgt | grep \"Location: (0P,0L)\""
   - "gmalt-hgtread 0.861295 10.339703 gmaltcli/test/srtm3/N00E010.hgt | grep \"Value: 644\""
