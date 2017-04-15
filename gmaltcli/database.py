@@ -8,8 +8,8 @@ import sqlalchemy.exc
 
 class ManagerRegistry(type):
     """ Python Registry pattern to store all manager.
-    
-    .. note:: A manager extends :class:`gmaltcli.database.BaseManager` to insert elevation data 
+
+    .. note:: A manager extends :class:`gmaltcli.database.BaseManager` to insert elevation data
         into the database. A database driver may have multiple manager if gmalt supports multiple
         schema for this one.
     """
@@ -23,8 +23,8 @@ class ManagerRegistry(type):
     @staticmethod
     def get_manager_class(db_driver, use_raster):
         """ Get a manager class matching the database driver and the model (raster support or not)
-        
-        :param str db_driver: the database drive 
+
+        :param str db_driver: the database drive
         :param bool use_raster: True if the manager must be of raster type (GIS extension in database)
         :return: :class:`gmaltcli.database.BaseManager`
         """
@@ -35,12 +35,12 @@ class ManagerRegistry(type):
 
 class Manager(object):
     def __new__(cls, db_driver, use_raster, *args, **kwargs):
-        """ Not really useful but I wanted to try a class which returns an object of another 
+        """ Not really useful but I wanted to try a class which returns an object of another
         type on instantiation.
-        
+
         Here it uses the :class:`gmaltcli.database.ManagerRegistry` to return the right manager when
         developer instantiates the Manager.
-        
+
         :return: a manager object
         :rtype: :class:`gmaltcli.database.BaseManager`
         """
@@ -49,7 +49,7 @@ class Manager(object):
 
 class ManagerFactory(object):
     """ This class provides a factory of :class:`gmaltcli.database.BaseManager`
-    
+
     .. seealso: :func:`gmaltcli.database.ManagerBuilder.__create_engine` for details on constructor args
     """
     def __init__(self, type_, table_name, pool_size=1, **db_info):
@@ -60,9 +60,9 @@ class ManagerFactory(object):
     @staticmethod
     def __create_engine(type_, pool_size=1, **db_info):
         """ Create a sqlalchemy engine
-        
+
         .. seealso:: supports all keywords arguments of constructor :class:`sqlalchemy.engine.url.URL`
-        
+
         :param str type_: the type of engine (postgres, mysql)
         :param int pool_size: pool size of the engine (at least as much as the number of threads
             in :class:`gmaltcli.worker.WorkerPool`)
@@ -122,23 +122,30 @@ class BaseManager(object):
     def is_compatible(self):
         return True
 
-    def insert_or_update(self, data):
+    def insert_or_update(self, data, parser):
         raise Exception('to be implemented in child class')
 
 
 class BaseValueManager(BaseManager):
     USE_RASTER = False
 
-    def insert_or_update(self, data):
+    def insert_or_update(self, data, parser):
+        elevation_value = data[4]
+        area_corners = data[3]
+
+        # Don't import void elevation values
+        if elevation_value is None:
+            return
+
         params = {
-            'lat_min': min([corner[0] for corner in data[3]]),
-            'lat_max': max([corner[0] for corner in data[3]]),
-            'lng_min': min([corner[1] for corner in data[3]]),
-            'lng_max': max([corner[1] for corner in data[3]]),
+            'lat_min': min([corner[0] for corner in area_corners]),
+            'lat_max': max([corner[0] for corner in area_corners]),
+            'lng_min': min([corner[1] for corner in area_corners]),
+            'lng_max': max([corner[1] for corner in area_corners]),
         }
         value_exists = self._execute(self.VALUE_EXIST_QUERY, params, method='scalar')
         if not value_exists:
-            params.update({'value': data[4]})
+            params.update({'value': elevation_value})
             self._execute(self.VALUE_CREATE_QUERY, params, method='scalar')
 
 
@@ -193,5 +200,34 @@ class PostgresRasterManager(with_metaclass(ManagerRegistry, BaseManager)):
                                "    WHERE   extname='postgis'"
                                ")")
 
+    RASTER_CREATE_QUERY = ("INSERT INTO \"{table_name}\" (\"rast\") "
+                           "VALUES (ST_SetValues("
+                           "    ST_AddBand("
+                           "        ST_MakeEmptyRaster(%(width)s, %(height)s, %(topleftx)s, %(toplefty)s, %(scalex)s, %(scaley)s, 0, 0, 4326),"  # noqa
+                           "        '16BSI'::text, %(default_value)s, %(nodata_value)s"
+                           "    ),"
+                           "    1, 0, 0, %(elevation_values)s::double precision[][]"
+                           "))")
+
     def is_compatible(self):
         return self._execute(self.POSTGIS_AVAILABLE_QUERY, method='scalar')
+
+    def insert_or_update(self, data, parser):
+        elevation_values = data[4]
+
+        area_corners = data[3]
+        top_left_corner = area_corners[1]
+
+        params = {
+            'width': len(elevation_values[0]),
+            'height': len(elevation_values),
+            'topleftx': top_left_corner[1],
+            'toplefty': top_left_corner[0],
+            'scalex': float(parser.square_width),
+            'scaley': -1 * float(parser.square_height),  # raster descending on latitude (line per line)
+            'default_value': 0,
+            'nodata_value': parser.VOID_VALUE,
+            'elevation_values': elevation_values
+        }
+
+        self._execute(self.RASTER_CREATE_QUERY, params, method='scalar')

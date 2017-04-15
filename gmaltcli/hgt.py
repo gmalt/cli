@@ -63,8 +63,8 @@ class HgtParser(object):
 
     @property
     def nb_values(self):
-        """  
-        :return: the total number of values in the file 
+        """
+        :return: the total number of values in the file
         :rtype: int
         """
         return self.sample_lat * self.sample_lng
@@ -207,7 +207,7 @@ class HgtParser(object):
         buf = self.file.read(2)
         val, = struct.unpack('>h', buf)
 
-        return val if not val == -32768 else None
+        return val if not val == self.VOID_VALUE else None
 
     def get_idx_in_file(self, pos):
         """ From a position (lat, lng) as float. Get the index of the elevation value inside the HGT file
@@ -239,8 +239,8 @@ class HgtParser(object):
 
 
 class HgtBaseIterator(object):
-    """ Base iterator to share methods 
-    
+    """ Base iterator to share methods
+
     :param bool as_float: if True returns square cornes as float else as :class:`fractions.Fraction`
     """
     def __init__(self, as_float=True):
@@ -248,7 +248,7 @@ class HgtBaseIterator(object):
 
     def to_float(self, value):
         """ Convert a :class:`fractions.Fraction` to a float if `as_float` is True
-        
+
         :param value: the fraction to convert
         :type value: :class:`fractions.Fraction`
         :return: the converted value
@@ -350,7 +350,7 @@ class HgtSampleIterator(HgtBaseIterator):
              top_left_corner[1] + len(values[0]) * self.parser.square_width)
         )
 
-        # Return same model as HgtValueIterator
+        # Return same model as HgtValueIterator with square width and height
         self.idx_col += 1
         return (
             top_left_line_idx,

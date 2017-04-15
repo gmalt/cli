@@ -302,7 +302,7 @@ class ImportWorker(Worker):
 
     def process(self, queue_item, counter_info):
         """ Import one HGT file
-        
+
         :param str queue_item: the HGT filepath to import
         :param counter_info: the counter for the current queue
         :type counter_info: :class:`gmaltcli.worker.SafeCounter`
@@ -323,7 +323,7 @@ class ImportWorker(Worker):
 
     def _get_iterator(self, parser):
         """ Get the right HTML iterator for the import task
-        
+
         :param parser: the HGT parser for the file
         :type parser: :class:`gmaltcli.hgt.HgtParser`
         :return: a HGT iterator
@@ -337,8 +337,8 @@ class ImportWorker(Worker):
             return parser.get_value_iterator()
 
     def _execute_import(self, elev_iter, manager):
-        """ Method called to import the data from a HGT iterator 
-        
+        """ Method called to import the data from a HGT iterator
+
         :param iter elev_iter: iterator of elevation HGT data
         :param manager: manager to import data into database
         :type manager: :class:`gmaltcli.database.BaseManager`
@@ -352,9 +352,7 @@ class ImportWorker(Worker):
             if self.stop_event.is_set():
                 break
 
-            # Don't import void elevation values
-            if value[4] != elev_iter.parser.VOID_VALUE:
-                manager.insert_or_update(value)
+            manager.insert_or_update(value, elev_iter.parser)
 
             # Display progress as percentage
             processed += 1
