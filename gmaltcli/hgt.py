@@ -279,6 +279,14 @@ class HgtValueIterator(HgtBaseIterator):
         self.parser = parser
         self.idx = 0
 
+    @property
+    def nb_values(self):
+        """
+        :return: the total number of values returned contained the iterable
+        :rtype: int
+        """
+        return self.parser.nb_values
+
     def __iter__(self):
         return self
 
@@ -316,6 +324,14 @@ class HgtSampleIterator(HgtBaseIterator):
         self.idx_line = 0
         self.range_col = range(0, self.parser.sample_lng, self.width)
         self.idx_col = 0
+
+    @property
+    def nb_values(self):
+        """
+        :return: the total number of values returned contained the iterable
+        :rtype: int
+        """
+        return len(self.range_line) * len(self.range_col)
 
     def __iter__(self):
         return self

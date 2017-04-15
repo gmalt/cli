@@ -173,6 +173,10 @@ class TestHgtParser(object):
 
 
 class TestHgtValueIterator(object):
+    def test_nb_values(self, srtm3_hgt):
+        with srtm3_hgt as parser:
+            assert parser.get_value_iterator().nb_values == 1442401
+
     def test_iter(self, srtm3_hgt):
         with srtm3_hgt as parser:
             values = list(parser.get_value_iterator())
@@ -203,6 +207,10 @@ class TestHgtValueIterator(object):
 
 
 class TestHgtSampleIterator(object):
+    def test_nb_values(self, srtm3_hgt):
+        with srtm3_hgt as parser:
+            assert parser.get_sample_iterator(50, 50).nb_values == 625
+
     def test_iter(self, srtm3_hgt):
         with srtm3_hgt as parser:
             square_values = list(parser.get_sample_iterator(50, 50))

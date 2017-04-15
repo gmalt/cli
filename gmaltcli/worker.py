@@ -343,7 +343,7 @@ class ImportWorker(Worker):
         :param manager: manager to import data into database
         :type manager: :class:`gmaltcli.database.BaseManager`
         """
-        total = elev_iter.parser.nb_values
+        total = elev_iter.nb_values
         processed = 0
         last_percentage = 0
 
