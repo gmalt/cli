@@ -264,4 +264,4 @@ class TestHgtSampleIterator(object):
                                 (Fraction(2401, 2400), Fraction(23999, 2400)),
                                 (Fraction(2401, 2400), Fraction(8033, 800)),
                                 (Fraction(767, 800), Fraction(8033, 800)))
-            assert len([value for line in value[4] for value in line]) == 2500
+            assert len([elev_value for line in value[4] for elev_value in line]) == 2500

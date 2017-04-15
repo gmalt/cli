@@ -11,7 +11,7 @@ try:
     from urllib.error import HTTPError, URLError
 except ImportError:
     # Python 2
-    from urllib2 import urlopen, HTTPError, URLError
+    from urllib2 import HTTPError, URLError
     import Queue as queue
 
 import gmaltcli.worker as worker
