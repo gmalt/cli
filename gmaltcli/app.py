@@ -147,6 +147,8 @@ def create_load_hgt_parser():
     gis_group.add_argument('-s', '--sample', nargs=2, type=int, dest='sample', metavar=('LNG_SAMPLE', 'LAT_SAMPLE'),
                            default=(None, None), help="Separate a HGT file in multiple rasters. Sample on lng axis "
                                                       "and lat axis.")
+    gis_group.add_argument('--skip-raster2pgsql-check', dest='check_raster2pgsql', default=True, action='store_false',
+                           help='Skip raster2pgsql presence check')
 
     return parser
 
@@ -173,9 +175,14 @@ def load_hgt():
     samples = args.pop('sample')
     db_driver = args.pop('type')
     table_name = args.pop('table')
+    check_raster2pgsql = args.pop('check_raster2pgsql')
 
     # sqlalchemy.engine.url.URL args
     db_info = args
+
+    # If postgres driver and raster2pgsql is available, propose to use this solution instead.
+    if db_driver == 'postgres' and use_raster and check_raster2pgsql and tools.check_for_raster2pgsql():
+        sys.exit(0)
 
     logging.info('config - parallelism : %i' % concurrency)
     logging.info('config - folder : %s' % folder)
@@ -203,4 +210,3 @@ def load_hgt():
                       exc_info=traceback)
     except Exception as e:
         logging.error('Unknown error : {}'.format(str(e)), exc_info=traceback)
-

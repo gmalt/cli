@@ -128,6 +128,7 @@ def test_create_load_hgt_parser_min_args(tmpdir):
     assert parsed.username == 'gmalt'
     assert parsed.verbose is False
     assert parsed.traceback is False
+    assert parsed.check_raster2pgsql is True
 
 
 def test_create_load_hgt_parser_all_args(tmpdir):
@@ -135,7 +136,7 @@ def test_create_load_hgt_parser_all_args(tmpdir):
     parser = app.create_load_hgt_parser()
     parsed = parser.parse_args(['-c', '2', '-v', '-tb', '--type', 'mysql', '-H', 'db.local', '-P', '3306',
                                 '-d', 'elev_db', '-u', 'gmalt', '-p', 'password', '-t', 'elev_tb', '-r', '-s',
-                                '3601', '3601', str(tmp_working_dir)])
+                                '3601', '3601', '--skip-raster2pgsql-check', str(tmp_working_dir)])
     assert parsed.concurrency == 2
     assert parsed.database == 'elev_db'
     assert parsed.folder == str(tmp_working_dir)
@@ -149,3 +150,4 @@ def test_create_load_hgt_parser_all_args(tmpdir):
     assert parsed.username == 'gmalt'
     assert parsed.verbose is True
     assert parsed.traceback is True
+    assert parsed.check_raster2pgsql is False

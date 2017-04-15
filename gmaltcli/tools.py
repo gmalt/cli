@@ -45,7 +45,7 @@ def writable_folder(folder_path):
 class LoadDatasetAction(argparse.Action):
     """ Load a dataset from a json file
 
-    .. note:: this action adds a keyword to the :class:`argparse.Namespace` : `dataset_files` which is a dict of 
+    .. note:: this action adds a keyword to the :class:`argparse.Namespace` : `dataset_files` which is a dict of
         all HGT files in this dataset
     """
 
@@ -118,3 +118,35 @@ def import_hgt_zip_files(working_dir, concurrency, factory, use_raster, samples)
     import_task.fill(hgt_files)
     import_task.start()
     logging.debug('Import end')
+
+
+def which(program):
+    """ Check in PATH if a program exists on the machine running this code
+
+    .. note:: copied from http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
+
+    :param str program: program name
+    :return: True if program found in PATH
+    :rtype: bool
+    """
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    file_path, file_name = os.path.split(program)
+    if file_path:  # if program is an absolute path
+        if is_exe(program):
+            return True
+    else:  # else check using PATH env
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return True
+
+    return False
+
+
+def check_for_raster2pgsql():
+    # TODO : check for raster2pgsql and provide a shell script using it
+    # raster2pgsql -a -M -t 50x50  tmp/N00E010.hgt elevation > ~/raster.sql
+    return False
