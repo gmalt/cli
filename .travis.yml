@@ -17,6 +17,7 @@ before_script:
     - psql -U postgres -d hgt_test -c "create extension postgis;"
 
 script:
+  - flake8
   - python setup.py test
   - "gmalt-hgtread 1.0001 10.0001 gmaltcli/test/srtm3/N00E010.hgt | grep \"Value: 57\""
   - "gmalt-hgtread 1.0001 10.0001 gmaltcli/test/srtm3/N00E010.hgt | grep \"Location: (0P,0L)\""
