@@ -133,7 +133,7 @@ class BaseManager(object):
     def insert_or_update(self, data, parser):
         # Don't import void elevation values
         elevation_value = data[4]
-        if elevation_value is None:
+        if elevation_value == parser.VOID_VALUE:
             return
 
         params = self.prepare_params(data, parser)

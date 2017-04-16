@@ -156,7 +156,7 @@ class TestHgtParser(object):
         opened_file.clean()
         opened_file.value = struct.pack('>h', -32768)
         alt_value = srtm3_hgt.get_value(7205)
-        assert alt_value is None
+        assert alt_value == -32768
 
     def test_get_idx_in_file(self, srtm3_hgt):
         with pytest.raises(Exception) as e:
@@ -170,6 +170,13 @@ class TestHgtParser(object):
             assert parser.get_elevation((0.56, 10.86)) == (528, 1032, 411)
             assert parser.get_elevation((0.1, 10.1)) == (1080, 120, 53)
             assert parser.get_elevation((1.0001, 11.0001)) == (0, 1200, 505)
+
+    def test_get_elevation_void_value(self, monkeypatch, srtm3_hgt):
+        def mockreturn(idx):
+            return hgt.HgtParser.VOID_VALUE
+        monkeypatch.setattr(srtm3_hgt, 'get_value', mockreturn)
+        with srtm3_hgt as parser:
+            assert parser.get_elevation((1.0001, 11.0001)) == (0, 1200, None)
 
 
 class TestHgtValueIterator(object):

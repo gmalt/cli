@@ -207,7 +207,7 @@ class HgtParser(object):
         buf = self.file.read(2)
         val, = struct.unpack('>h', buf)
 
-        return val if not val == self.VOID_VALUE else None
+        return val
 
     def get_idx_in_file(self, pos):
         """ From a position (lat, lng) as float. Get the index of the elevation value inside the HGT file
@@ -235,7 +235,11 @@ class HgtParser(object):
         """
         lat_idx, lng_idx, idx = self.get_idx_in_file(pos)
 
-        return lat_idx, lng_idx, self.get_value(idx)
+        # If no elevation returns None
+        value = self.get_value(idx)
+        value = value if value != self.VOID_VALUE else None
+
+        return lat_idx, lng_idx, value
 
 
 class HgtBaseIterator(object):
