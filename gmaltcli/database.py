@@ -80,6 +80,11 @@ class BaseManager(object):
     TYPE = None
     USE_RASTER = None
 
+    TABLE_EXISTS_QUERY = None
+    TABLE_CREATE_QUERY = None
+    VALUE_EXIST_QUERY = None
+    VALUE_CREATE_QUERY = None
+
     def __init__(self, connection, table_name):
         self.connection = connection
         self.table_name = table_name
@@ -122,34 +127,22 @@ class BaseManager(object):
     def is_compatible(self):
         return True
 
-    def insert_or_update(self, data, parser):
+    def prepare_params(self, data, parser):
         raise Exception('to be implemented in child class')
 
-
-class BaseValueManager(BaseManager):
-    USE_RASTER = False
-
     def insert_or_update(self, data, parser):
-        elevation_value = data[4]
-        area_corners = data[3]
-
         # Don't import void elevation values
+        elevation_value = data[4]
         if elevation_value is None:
             return
 
-        params = {
-            'lat_min': min([corner[0] for corner in area_corners]),
-            'lat_max': max([corner[0] for corner in area_corners]),
-            'lng_min': min([corner[1] for corner in area_corners]),
-            'lng_max': max([corner[1] for corner in area_corners]),
-        }
+        params = self.prepare_params(data, parser)
         value_exists = self._execute(self.VALUE_EXIST_QUERY, params, method='scalar')
         if not value_exists:
-            params.update({'value': elevation_value})
             self._execute(self.VALUE_CREATE_QUERY, params, method='scalar')
 
 
-class PostgresValueManager(with_metaclass(ManagerRegistry, BaseValueManager)):
+class PostgresValueManager(with_metaclass(ManagerRegistry, BaseManager)):
     TYPE = 'postgres'
     USE_RASTER = False
 
@@ -178,6 +171,18 @@ class PostgresValueManager(with_metaclass(ManagerRegistry, BaseValueManager)):
     VALUE_CREATE_QUERY = ("INSERT INTO \"{table_name}\" (lat_min, lng_min, lat_max, lng_max, \"value\") "
                           "VALUES (%(lat_min)s, %(lng_min)s, %(lat_max)s, %(lng_max)s, %(value)s)")
 
+    def prepare_params(self, data, parser):
+        area_corners = data[3]
+        elevation_value = data[4]
+
+        return {
+            'lat_min': min([corner[0] for corner in area_corners]),
+            'lat_max': max([corner[0] for corner in area_corners]),
+            'lng_min': min([corner[1] for corner in area_corners]),
+            'lng_max': max([corner[1] for corner in area_corners]),
+            'value': elevation_value
+        }
+
 
 class PostgresRasterManager(with_metaclass(ManagerRegistry, BaseManager)):
     TYPE = 'postgres'
@@ -200,25 +205,31 @@ class PostgresRasterManager(with_metaclass(ManagerRegistry, BaseManager)):
                                "    WHERE   extname='postgis'"
                                ")")
 
-    RASTER_CREATE_QUERY = ("INSERT INTO \"{table_name}\" (\"rast\") "
-                           "VALUES (ST_SetValues("
-                           "    ST_AddBand("
-                           "        ST_MakeEmptyRaster(%(width)s, %(height)s, %(topleftx)s, %(toplefty)s, %(scalex)s, %(scaley)s, 0, 0, 4326),"  # noqa
-                           "        '16BSI'::text, %(default_value)s, %(nodata_value)s"
-                           "    ),"
-                           "    1, 0, 0, %(elevation_values)s::double precision[][]"
-                           "))")
+    VALUE_EXIST_QUERY = ("SELECT 1"
+                         "FROM   \"{table_name}\""
+                         "WHERE  ST_Envelope(rast) = ST_GeomFromText('POLYGON((%(minx)s %(miny)s, %(minx)s %(maxy)s, %(maxx)s %(maxy)s, %(maxx)s %(miny)s, %(minx)s %(miny)s))', 4326);")  # noqa
+
+    VALUE_CREATE_QUERY = ("INSERT INTO \"{table_name}\" (\"rast\") "
+                          "VALUES (ST_SetValues("
+                          "    ST_AddBand("
+                          "        ST_MakeEmptyRaster(%(width)s, %(height)s, %(topleftx)s, %(toplefty)s, %(scalex)s, %(scaley)s, 0, 0, 4326),"  # noqa
+                          "        '16BSI'::text, %(default_value)s, %(nodata_value)s"
+                          "    ),"
+                          "    1, 0, 0, %(elevation_values)s::double precision[][]"
+                          "));")
 
     def is_compatible(self):
         return self._execute(self.POSTGIS_AVAILABLE_QUERY, method='scalar')
 
-    def insert_or_update(self, data, parser):
+    def prepare_params(self, data, parser):
         elevation_values = data[4]
 
         area_corners = data[3]
         top_left_corner = area_corners[1]
+        bottom_right_corner = area_corners[3]
 
-        params = {
+        return {
+            # Used in INSERT query
             'width': len(elevation_values[0]),
             'height': len(elevation_values),
             'topleftx': top_left_corner[1],
@@ -227,7 +238,11 @@ class PostgresRasterManager(with_metaclass(ManagerRegistry, BaseManager)):
             'scaley': -1 * float(parser.square_height),  # raster descending on latitude (line per line)
             'default_value': 0,
             'nodata_value': parser.VOID_VALUE,
-            'elevation_values': elevation_values
-        }
+            'elevation_values': elevation_values,
 
-        self._execute(self.RASTER_CREATE_QUERY, params, method='scalar')
+            # Used in SELECT query
+            'minx': top_left_corner[1],
+            'miny': bottom_right_corner[0],
+            'maxx': bottom_right_corner[1],
+            'maxy': top_left_corner[0]
+        }
