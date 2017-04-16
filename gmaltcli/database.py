@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 
 from future.utils import with_metaclass
@@ -77,6 +78,17 @@ class ManagerFactory(object):
 
 
 class BaseManager(object):
+    """ Base class to manage insertion of elevation value
+
+    .. note:: child class needs to define the different queries and the `prepare_params`
+        method (which provides the parameters for the queries)
+
+    .. note:: manager object needs to be accessed using a context manager
+
+    :param connection: a sqlalchemy connection object
+    :type connection: :class:`sqlalchemy.engine.base.Connection `
+    :param str table_name: the name of the table to store the elevation value
+    """
     TYPE = None
     USE_RASTER = None
 
@@ -96,6 +108,14 @@ class BaseManager(object):
         self.connection.close()
 
     def _execute(self, query, params=None, method='fetchall'):
+        """ Execute the SQL `query` with the binded `params` and call the `method` on the result cursor
+
+        :param str query: the SQL query to execute
+        :param dict params: dict of values to bind to the query
+        :param str method: the method to call on the
+            sqlalchemy result cursor (see method from :class:`sqlalchemy.engine.ResultProxy`)
+        :return: the result of the query or None
+        """
         params = params if params is not None else {}
         params.update({'table_name': self.table_name})
         with self.connection.begin():
@@ -106,12 +126,24 @@ class BaseManager(object):
                 return None
 
     def table_exists(self):
+        """ Execute the `TABLE_EXISTS_QUERY` query
+
+        :return: 1 if table exists else None
+        :rtype: int
+        """
         return self._execute(self.TABLE_EXISTS_QUERY, method='scalar')
 
     def create_table(self):
+        """ Execute the `TABLE_CREATE_QUERY` query
+
+        :return: None
+        """
         return self._execute(self.TABLE_CREATE_QUERY)
 
     def prepare_environment(self):
+        """ Check if the database is compatible with the chosen format of the elevation data and create the table to
+        store these data if it does not exist
+        """
         if not self.is_compatible():
             raise sqlalchemy.exc.NotSupportedError('Database is not compatible with the provided settings')
 
@@ -125,12 +157,38 @@ class BaseManager(object):
             logging.debug('Table {} exists. Nothing to create.'.format(self.table_name))
 
     def is_compatible(self):
+        """ Override in child class to check if the database if compatible with the chosen format of elevation
+        data (for example, you can check if the PostGIS extension is installed for raster data on PostgreSQL
+
+        :return: True if compatible else False
+        :rtype: bool
+        """
         return True
 
     def prepare_params(self, data, parser):
+        """ Prepare params for SELECT (to check if these elevations data have already been import) or INSERT queries
+
+        .. note:: see implementation in child class
+
+        :param data: elevation data (polygon, elevation)
+        :type data: tuple
+        :param parser: the HGT parser
+        :type parser: :class:`gmaltcli.hgt.HgtParser`
+        :return: dict with the params for both queries
+        :rtype: dict
+        """
         raise Exception('to be implemented in child class')
 
-    def insert_or_update(self, data, parser):
+    def insert_data(self, data, parser):
+        """ Insert elevation data if they don't exist in the table yet
+
+        :param data: data coming from a HGT iterator (:class:`gmalcli.hgt.HgtSampleIterator`
+            or :class:`gmalcli.hgt.HgtValueIterator`)
+        :type data: tuple
+        :param parser: the HGT parser used to get the data. Passed in this method because some database manager needs
+            generic information about the parsed file that are stored in the parser
+        :rtype: :class:`gmaltcli.hgt.HgtParser`
+        """
         # Don't import void elevation values
         elevation_value = data[4]
         if elevation_value == parser.VOID_VALUE:
@@ -143,6 +201,7 @@ class BaseManager(object):
 
 
 class PostgresValueManager(with_metaclass(ManagerRegistry, BaseManager)):
+    """ Provides SQL queries to import elevation value in a PostgreSQL table WITHOUT PostGIS """
     TYPE = 'postgres'
     USE_RASTER = False
 
@@ -172,6 +231,9 @@ class PostgresValueManager(with_metaclass(ManagerRegistry, BaseManager)):
                           "VALUES (%(lat_min)s, %(lng_min)s, %(lat_max)s, %(lng_max)s, %(value)s)")
 
     def prepare_params(self, data, parser):
+        """
+        .. seealso:: :func:`gmaltcli.database.BaseManager.prepare_params`
+        """
         area_corners = data[3]
         elevation_value = data[4]
 
@@ -185,6 +247,7 @@ class PostgresValueManager(with_metaclass(ManagerRegistry, BaseManager)):
 
 
 class PostgresRasterManager(with_metaclass(ManagerRegistry, BaseManager)):
+    """ Provides SQL queries to import elevation value in a PostgreSQL table WITH PostGIS """
     TYPE = 'postgres'
     USE_RASTER = True
 
@@ -219,9 +282,17 @@ class PostgresRasterManager(with_metaclass(ManagerRegistry, BaseManager)):
                           "));")
 
     def is_compatible(self):
+        """ Execute query to check if the postgis extension is enabled
+
+        :return: 1 if the extension is activated else None
+        :rtype: int or None
+        """
         return self._execute(self.POSTGIS_AVAILABLE_QUERY, method='scalar')
 
     def prepare_params(self, data, parser):
+        """
+        .. seealso:: :func:`gmaltcli.database.BaseManager.prepare_params`
+        """
         elevation_values = data[4]
 
         area_corners = data[3]

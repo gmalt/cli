@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import threading
 import logging
@@ -352,7 +353,7 @@ class ImportWorker(Worker):
             if self.stop_event.is_set():
                 break
 
-            manager.insert_or_update(value, elev_iter.parser)
+            manager.insert_data(value, elev_iter.parser)
 
             # Display progress as percentage
             processed += 1
