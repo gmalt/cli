@@ -7,6 +7,10 @@ import sqlalchemy.engine.url as sql_url
 import sqlalchemy.exc
 
 
+class NotSupportedException(sqlalchemy.exc.SQLAlchemyError):
+    pass
+
+
 class ManagerRegistry(type):
     """ Python Registry pattern to store all manager.
 
@@ -145,7 +149,7 @@ class BaseManager(object):
         store these data if it does not exist
         """
         if not self.is_compatible():
-            raise sqlalchemy.exc.NotSupportedError('Database is not compatible with the provided settings')
+            raise NotSupportedException('Database is not compatible with the provided settings')
 
         logging.debug('Database compatible with provided settings.')
 

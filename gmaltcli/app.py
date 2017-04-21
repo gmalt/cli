@@ -209,5 +209,7 @@ def load_hgt():
     except sqlalchemy.exc.OperationalError:
         logging.error('Unable to connect to database with these settings : {}'.format(factory.engine.url),
                       exc_info=traceback)
+    except database.NotSupportedException:
+        logging.error('Database does not support raster settings. Have you enabled GIS extension ?', exc_info=traceback)
     except Exception as e:
         logging.error('Unknown error : {}'.format(str(e)), exc_info=traceback)
