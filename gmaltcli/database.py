@@ -8,6 +8,8 @@ import sqlalchemy.exc
 
 
 class NotSupportedException(sqlalchemy.exc.SQLAlchemyError):
+    """ Exception raised if database does not support the provided settings. Most probably because
+    no GIS extension has been enabled """
     pass
 
 
@@ -63,7 +65,7 @@ class ManagerFactory(object):
         self.engine = self.__create_engine(type_, pool_size=pool_size, **db_info)
 
     @staticmethod
-    def __create_engine(type_, pool_size=1, **db_info):
+    def __create_engine(type_, pool_size=1, debug=False, **db_info):
         """ Create a sqlalchemy engine
 
         .. seealso:: supports all keywords arguments of constructor :class:`sqlalchemy.engine.url.URL`
@@ -71,11 +73,12 @@ class ManagerFactory(object):
         :param str type_: the type of engine (postgres, mysql)
         :param int pool_size: pool size of the engine (at least as much as the number of threads
             in :class:`gmaltcli.worker.WorkerPool`)
+        :param bool debug: Enable echo parameters of sqlalchemy engine
         :return: a sqlalchemy engine
         :rtype: :class:`sqlalchemy.engine.base.Engine`
         """
         uri = sql_url.URL(type_, **db_info)
-        return sqlalchemy_create_engine(uri, pool_size=pool_size)
+        return sqlalchemy_create_engine(uri, pool_size=pool_size, echo=debug)
 
     def get_manager(self, use_raster=False):
         return Manager(self.db_driver, use_raster, self.engine.connect(), self.table_name)
@@ -123,6 +126,7 @@ class BaseManager(object):
         params = params if params is not None else {}
         params.update({'table_name': self.table_name})
         with self.connection.begin():
+            # print(self.connection.connection.cursor().mogrify(query.format(**params), params))
             result = self.connection.execute(query.format(**params), params)
             if result.returns_rows:
                 return getattr(result, method)()
@@ -224,8 +228,8 @@ class PostgresValueManager(with_metaclass(ManagerRegistry, BaseManager)):
                           "    PRIMARY KEY (lat_min, lng_min, lat_max, lng_max)"
                           ");")
 
-    VALUE_EXIST_QUERY = ("SELECT 1"
-                         "FROM   \"{table_name}\""
+    VALUE_EXIST_QUERY = ("SELECT 1 "
+                         "FROM   \"{table_name}\" "
                          "WHERE  lat_min=%(lat_min)s"
                          "       AND lng_min=%(lng_min)s"
                          "       AND lat_max=%(lat_max)s"
@@ -272,8 +276,8 @@ class PostgresRasterManager(with_metaclass(ManagerRegistry, BaseManager)):
                                "    WHERE   extname='postgis'"
                                ")")
 
-    VALUE_EXIST_QUERY = ("SELECT 1"
-                         "FROM   \"{table_name}\""
+    VALUE_EXIST_QUERY = ("SELECT 1 "
+                         "FROM   \"{table_name}\" "
                          "WHERE  ST_Envelope(rast) = ST_GeomFromText('POLYGON((%(minx)s %(miny)s, %(minx)s %(maxy)s, %(maxx)s %(maxy)s, %(maxx)s %(miny)s, %(minx)s %(miny)s))', 4326);")  # noqa
 
     VALUE_CREATE_QUERY = ("INSERT INTO \"{table_name}\" (\"rast\") "
@@ -282,7 +286,7 @@ class PostgresRasterManager(with_metaclass(ManagerRegistry, BaseManager)):
                           "        ST_MakeEmptyRaster(%(width)s, %(height)s, %(topleftx)s, %(toplefty)s, %(scalex)s, %(scaley)s, 0, 0, 4326),"  # noqa
                           "        '16BSI'::text, %(default_value)s, %(nodata_value)s"
                           "    ),"
-                          "    1, 0, 0, %(elevation_values)s::double precision[][]"
+                          "    1, 1, 1, %(elevation_values)s::double precision[][]"
                           "));")
 
     def is_compatible(self):
