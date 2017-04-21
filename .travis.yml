@@ -33,7 +33,16 @@ script:
   - "ls $TMPDIR | grep '^N00E009.hgt.zip$'"
   - "ls $TMPDIR | grep '^N00E009.hgt$'"
   - "md5sum -b $TMPDIR/N00E009.hgt | grep '0dc319cb922bac1b7ccefa0b55688a51'"
+
+  # Tests without GIS extension on Postgres
   - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation gmaltcli/test/import/"
   - "psql -U postgres -d hgt_test -c 'SELECT COUNT(*) FROM elevation;' | grep 5000"
   - "psql -U postgres -d hgt_test -c 'SELECT value FROM elevation WHERE (2.67 BETWEEN lat_min AND lat_max) AND (10.69 BETWEEN lng_min AND lng_max);' | grep 434"
   - "psql -U postgres -d hgt_test -c 'SELECT value FROM elevation WHERE (0.46 BETWEEN lat_min AND lat_max) AND (1.02 BETWEEN lng_min AND lng_max);' | grep 146"
+
+  # Tests with GIS extension on Postgres without sampling the file
+  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_full -r gmaltcli/test/import/"
+  - "psql -U postgres -d hgt_test -c 'SELECT COUNT(*) FROM elevation_gis_full;' | grep 2"
+  - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_full;' | grep '50,50,0.0204081632653061,-0.0204081632653061,0,0,4326,1)' | wc -l | grep 2"
+  - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_full;' | grep '(9.98979591836735,3.01020408163265,'"
+  - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_full;' | grep '(0.989795918367347,1.01020408163265,'"
