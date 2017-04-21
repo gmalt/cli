@@ -46,3 +46,28 @@ script:
   - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_full;' | grep '50,50,0.0204081632653061,-0.0204081632653061,0,0,4326,1)' | wc -l | grep 2"
   - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_full;' | grep '(9.98979591836735,3.01020408163265,'"
   - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_full;' | grep '(0.989795918367347,1.01020408163265,'"
+  - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(10.69 2.67)', 4326)) FROM elevation_gis_full WHERE rast ~ ST_PointFromText('POINT(10.69 2.67)');\" | grep 434"
+  - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(1.02 0.46)', 4326)) FROM elevation_gis_full WHERE rast ~ ST_PointFromText('POINT(1.02 0.46)');\" | grep 146"
+
+  # Tests with GIS extension on Postgres while sampling the file
+  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_sampled -r -s 12 11 gmaltcli/test/import/"
+  - "psql -U postgres -d hgt_test -c 'SELECT count(*) from elevation_gis_sampled;' | grep 50"
+  - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_sampled;' | grep ',0.0204081632653061,-0.0204081632653061,0,0,4326,1)' | wc -l | grep 50"
+  - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_sampled;' | grep ',12,11,' | wc -l | grep 32"
+  - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_sampled;' | grep ',2,11,' | wc -l | grep 8"
+  - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_sampled;' | grep ',12,6,' | wc -l | grep 8"
+  - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_sampled;' | grep ',2,6,' | wc -l | grep 2"
+  - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(10.69 2.67)', 4326)) FROM elevation_gis_sampled WHERE rast ~ ST_PointFromText('POINT(10.69 2.67)');\" | grep 434"
+  - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(1.02 0.46)', 4326)) FROM elevation_gis_sampled WHERE rast ~ ST_PointFromText('POINT(1.02 0.46)');\" | grep 146"
+
+  # Tests with GIS extension on Postgres with original STRM3 file
+  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_srtm_full -r gmaltcli/test/srtm3/"
+  - "psql -U postgres -d hgt_test -c 'SELECT count(*) from elevation_gis_srtm_full;' | grep 1"
+  - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(10.0001 1.0001)', 4326)) FROM elevation_gis_srtm_full WHERE rast ~ ST_PointFromText('POINT(10.0001 1.0001)');\" | grep 57"
+  - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(10.339703 0.861295)', 4326)) FROM elevation_gis_srtm_full WHERE rast ~ ST_PointFromText('POINT(10.339703 0.861295)');\" | grep 644"
+
+  # Tests with GIS extension on Postgres with sampled STRM3 file
+  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_srtm_sampled -r -s 50 50 gmaltcli/test/srtm3/"
+  - "psql -U postgres -d hgt_test -c 'SELECT count(*) from elevation_gis_srtm_sampled;' | grep 625"
+  - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(10.0001 1.0001)', 4326)) FROM elevation_gis_srtm_sampled WHERE rast ~ ST_PointFromText('POINT(10.0001 1.0001)');\" | grep 57"
+  - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(10.339703 0.861295)', 4326)) FROM elevation_gis_srtm_sampled WHERE rast ~ ST_PointFromText('POINT(10.339703 0.861295)');\" | grep 644"
