@@ -133,8 +133,8 @@ class Worker(threading.Thread):
         the program that it needs to exit
 
     :param int id_: id of the worker
-    :param queue: the queue the worker subscribe to
-    :type queue: :class:`queue.Queue`
+    :param queue_obj: the queue the worker subscribe to
+    :type queue_obj: :class:`queue.Queue`
     :param counter: a thread-safe counter with an `increment` method
     :type counter: :class:`hgt2sql.worker.SafeCounter`
     :param stop_event: a stop_event shared between all thread in the pool to

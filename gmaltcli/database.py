@@ -123,7 +123,7 @@ class BaseManager(object):
             sqlalchemy result cursor (see method from :class:`sqlalchemy.engine.ResultProxy`)
         :return: the result of the query or None
         """
-        params = params if params is not None else {}
+        params = params or {}
         params.update({'table_name': self.table_name})
         with self.connection.begin():
             # print(self.connection.connection.cursor().mogrify(query.format(**params), params))
