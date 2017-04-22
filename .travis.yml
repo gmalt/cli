@@ -10,12 +10,13 @@ services:
 
 install:
   - python setup.py develop
+  - pip install -e .[test]
+  - pip install -U pytest
 
 before_script:
     - "TMPDIR=`mktemp -d`"
     - psql -c 'create database hgt_test;' -U postgres
     - psql -U postgres -d hgt_test -c "create extension postgis;"
-    - pip install flake8
 
 script:
   - pytest -v gmaltcli/test/

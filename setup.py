@@ -18,9 +18,9 @@ setup(
     packages=find_packages(exclude=["test"]),
     long_description=read('README.md'),
     install_requires=['SQLAlchemy', 'psycopg2', 'future'],
-    tests_require=['pytest', 'flake8', 'mock'],
     extras_require={
-        'tools': ['lxml']
+        'tools': ['lxml'],
+        'test': ['pytest', 'flake8', 'mock']
     },
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
