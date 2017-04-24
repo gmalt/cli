@@ -59,7 +59,7 @@ class LoadDatasetAction(argparse.Action):
         setattr(namespace, self.dest, values)
         with open(values) as dataset_file:
             data = json.load(dataset_file)
-        setattr(namespace, 'dataset_files', data['files'])
+        setattr(namespace, 'dataset_files', data)
 
 
 def download_hgt_zip_files(working_dir, data, concurrency, skip=False):
