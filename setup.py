@@ -14,16 +14,16 @@ setup(
     description="Download, extract and import HGT data into a SQL database",
     license="MIT",
     keywords="example documentation tutorial",
-    url="http://github.com/gmalt/gmaltcli",
+    url="https://github.com/gmalt/cli",
     packages=find_packages(exclude=["test"]),
-    long_description=read('README.md'),
+    long_description=read('README.rst'),
     install_requires=['SQLAlchemy', 'psycopg2', 'future'],
     extras_require={
         'tools': ['lxml'],
         'test': ['pytest', 'flake8', 'mock']
     },
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 2.7",
