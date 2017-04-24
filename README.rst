@@ -9,7 +9,7 @@ Introduction
 
 This project provides a few CLI commands to download, extract and import HGT data into a SQL database.
 
-It has been tested on python 2.7, 3.4 and 3.5 and works with PostgreSQL with and without PostGIS extension.
+It has been tested on python 2.7, 3.4, 3.5 and 3.6 and works with PostgreSQL with and without PostGIS extension.
 
 Documentation
 -------------
