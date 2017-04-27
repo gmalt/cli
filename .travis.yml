@@ -20,16 +20,16 @@ before_script:
     - psql -U postgres -d hgt_test -c "create extension postgis;"
 
 script:
-  - pytest -v gmaltcli/test/
+  - pytest -v gmaltcli/tests/
   - flake8 gmaltcli
-  - "gmalt-hgtread 1.0001 10.0001 gmaltcli/test/srtm3/N00E010.hgt | grep \"Value: 57\""
-  - "gmalt-hgtread 1.0001 10.0001 gmaltcli/test/srtm3/N00E010.hgt | grep \"Location: (0P,0L)\""
-  - "gmalt-hgtread 0.861295 10.339703 gmaltcli/test/srtm3/N00E010.hgt | grep \"Value: 644\""
-  - "gmalt-hgtread 0.861295 10.339703 gmaltcli/test/srtm3/N00E010.hgt | grep \"Location: (408P,166L)\""
-  - "gmalt-hgtread 1.0001 10.0001 gmaltcli/test/srtm1/N00E010.hgt | grep \"Value: 57\""
-  - "gmalt-hgtread 1.0001 10.0001 gmaltcli/test/srtm1/N00E010.hgt | grep \"Location: (0P,0L)\""
-  - "gmalt-hgtread 0.861295 10.339703 gmaltcli/test/srtm1/N00E010.hgt | grep \"Value: 646\""
-  - "gmalt-hgtread 0.861295 10.339703 gmaltcli/test/srtm1/N00E010.hgt | grep \"Location: (1223P,499L)\""
+  - "gmalt-hgtread 1.0001 10.0001 gmaltcli/tests/srtm3/N00E010.hgt | grep \"Value: 57\""
+  - "gmalt-hgtread 1.0001 10.0001 gmaltcli/tests/srtm3/N00E010.hgt | grep \"Location: (0P,0L)\""
+  - "gmalt-hgtread 0.861295 10.339703 gmaltcli/tests/srtm3/N00E010.hgt | grep \"Value: 644\""
+  - "gmalt-hgtread 0.861295 10.339703 gmaltcli/tests/srtm3/N00E010.hgt | grep \"Location: (408P,166L)\""
+  - "gmalt-hgtread 1.0001 10.0001 gmaltcli/tests/srtm1/N00E010.hgt | grep \"Value: 57\""
+  - "gmalt-hgtread 1.0001 10.0001 gmaltcli/tests/srtm1/N00E010.hgt | grep \"Location: (0P,0L)\""
+  - "gmalt-hgtread 0.861295 10.339703 gmaltcli/tests/srtm1/N00E010.hgt | grep \"Value: 646\""
+  - "gmalt-hgtread 0.861295 10.339703 gmaltcli/tests/srtm1/N00E010.hgt | grep \"Location: (1223P,499L)\""
   - "gmalt-hgtget small $TMPDIR"
   - "ls $TMPDIR | wc -l | grep 6"
   - "ls $TMPDIR | grep '^N00E009.hgt.zip$'"
@@ -37,13 +37,13 @@ script:
   - "md5sum -b $TMPDIR/N00E009.hgt | grep '0dc319cb922bac1b7ccefa0b55688a51'"
 
   # Tests without GIS extension on Postgres
-  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation gmaltcli/test/import/"
+  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation gmaltcli/tests/import/"
   - "psql -U postgres -d hgt_test -c 'SELECT COUNT(*) FROM elevation;' | grep 5000"
   - "psql -U postgres -d hgt_test -c 'SELECT value FROM elevation WHERE (2.67 BETWEEN lat_min AND lat_max) AND (10.69 BETWEEN lng_min AND lng_max);' | grep 434"
   - "psql -U postgres -d hgt_test -c 'SELECT value FROM elevation WHERE (0.46 BETWEEN lat_min AND lat_max) AND (1.02 BETWEEN lng_min AND lng_max);' | grep 146"
 
   # Tests with GIS extension on Postgres without sampling the file
-  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_full -r gmaltcli/test/import/"
+  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_full -r gmaltcli/tests/import/"
   - "psql -U postgres -d hgt_test -c 'SELECT COUNT(*) FROM elevation_gis_full;' | grep 2"
   - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_full;' | grep '50,50,0.0204081632653061,-0.0204081632653061,0,0,4326,1)' | wc -l | grep 2"
   - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_full;' | grep '(9.98979591836735,3.01020408163265,'"
@@ -52,7 +52,7 @@ script:
   - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(1.02 0.46)', 4326)) FROM elevation_gis_full WHERE rast ~ ST_PointFromText('POINT(1.02 0.46)');\" | grep 146"
 
   # Tests with GIS extension on Postgres while sampling the file
-  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_sampled -r -s 12 11 gmaltcli/test/import/"
+  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_sampled -r -s 12 11 gmaltcli/tests/import/"
   - "psql -U postgres -d hgt_test -c 'SELECT count(*) from elevation_gis_sampled;' | grep 50"
   - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_sampled;' | grep ',0.0204081632653061,-0.0204081632653061,0,0,4326,1)' | wc -l | grep 50"
   - "psql -U postgres -d hgt_test -c 'select ST_MetaData(rast) from elevation_gis_sampled;' | grep ',12,11,' | wc -l | grep 32"
@@ -63,13 +63,13 @@ script:
   - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(1.02 0.46)', 4326)) FROM elevation_gis_sampled WHERE rast ~ ST_PointFromText('POINT(1.02 0.46)');\" | grep 146"
 
   # Tests with GIS extension on Postgres with original STRM3 file
-  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_srtm_full -r gmaltcli/test/srtm3/"
+  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_srtm_full -r gmaltcli/tests/srtm3/"
   - "psql -U postgres -d hgt_test -c 'SELECT count(*) from elevation_gis_srtm_full;' | grep 1"
   - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(10.0001 1.0001)', 4326)) FROM elevation_gis_srtm_full WHERE rast ~ ST_PointFromText('POINT(10.0001 1.0001)');\" | grep 57"
   - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(10.339703 0.861295)', 4326)) FROM elevation_gis_srtm_full WHERE rast ~ ST_PointFromText('POINT(10.339703 0.861295)');\" | grep 644"
 
   # Tests with GIS extension on Postgres with sampled STRM3 file
-  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_srtm_sampled -r -s 50 50 gmaltcli/test/srtm3/"
+  - "gmalt-hgtload -vv -tb -c 2  -u postgres -d hgt_test -H '' -t elevation_gis_srtm_sampled -r -s 50 50 gmaltcli/tests/srtm3/"
   - "psql -U postgres -d hgt_test -c 'SELECT count(*) from elevation_gis_srtm_sampled;' | grep 625"
   - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(10.0001 1.0001)', 4326)) FROM elevation_gis_srtm_sampled WHERE rast ~ ST_PointFromText('POINT(10.0001 1.0001)');\" | grep 57"
   - "psql -U postgres -d hgt_test -c \"SELECT ST_VALUE(rast, ST_PointFromText('POINT(10.339703 0.861295)', 4326)) FROM elevation_gis_srtm_sampled WHERE rast ~ ST_PointFromText('POINT(10.339703 0.861295)');\" | grep 644"
