@@ -2,7 +2,7 @@ import pytest
 import sqlalchemy
 
 import gmaltcli.database as database
-import gmaltcli.test.tools as tools
+import gmaltcli.tests.tools as tools
 
 
 def test_manager_registry_get_manager_class():

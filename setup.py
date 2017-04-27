@@ -13,14 +13,16 @@ setup(
     author_email="jonathan.bouzekri@gmail.com",
     description="Download, extract and import HGT data into a SQL database",
     license="MIT",
-    keywords="example documentation tutorial",
+    keywords=["hgt", "gis", "cli", "download", "import"],
     url="https://github.com/gmalt/cli",
-    packages=find_packages(exclude=["test"]),
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
+    include_package_data=True,
     long_description=read('README.rst'),
     install_requires=['SQLAlchemy', 'psycopg2', 'future'],
     extras_require={
         'tools': ['lxml'],
-        'test': ['pytest', 'flake8', 'mock']
+        'test': ['pytest', 'flake8', 'mock'],
+        'build': ['wheel']
     },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
