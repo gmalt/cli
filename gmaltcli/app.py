@@ -4,7 +4,8 @@ import sys
 import argparse
 import sqlalchemy.exc
 
-import gmaltcli.hgt as hgt
+import gmalthgtparser as hgt
+
 import gmaltcli.tools as tools
 import gmaltcli.worker as worker
 import gmaltcli.database as database

@@ -181,7 +181,7 @@ class BaseManager(object):
         :param data: elevation data (polygon, elevation)
         :type data: tuple
         :param parser: the HGT parser
-        :type parser: :class:`gmaltcli.hgt.HgtParser`
+        :type parser: :class:`gmalthgtparser.HgtParser`
         :return: dict with the params for both queries
         :rtype: dict
         """
@@ -190,12 +190,12 @@ class BaseManager(object):
     def insert_data(self, data, parser):
         """ Insert elevation data if they don't exist in the table yet
 
-        :param data: data coming from a HGT iterator (:class:`gmalcli.hgt.HgtSampleIterator`
-            or :class:`gmalcli.hgt.HgtValueIterator`)
+        :param data: data coming from a HGT iterator (:class:`gmalthgtparser.HgtSampleIterator`
+            or :class:`gmalthgtparser.HgtValueIterator`)
         :type data: tuple
         :param parser: the HGT parser used to get the data. Passed in this method because some database manager needs
             generic information about the parsed file that are stored in the parser
-        :rtype: :class:`gmaltcli.hgt.HgtParser`
+        :rtype: :class:`gmalthgtparser.HgtParser`
         """
         # Don't import void elevation values
         elevation_value = data[4]

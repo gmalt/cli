@@ -18,7 +18,7 @@ setup(
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     include_package_data=True,
     long_description=read('README.rst'),
-    install_requires=['SQLAlchemy', 'psycopg2', 'future'],
+    install_requires=['SQLAlchemy', 'psycopg2', 'future', 'gmalthgtparser'],
     extras_require={
         'tools': ['lxml'],
         'test': ['pytest', 'flake8', 'mock'],

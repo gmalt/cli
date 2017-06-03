@@ -22,7 +22,7 @@ except NameError:
     # Python 3
     xrange = range
 
-import gmaltcli.hgt as hgt
+import gmalthgtparser as hgt
 
 
 class SafeCounter(object):
@@ -326,7 +326,7 @@ class ImportWorker(Worker):
         """ Get the right HTML iterator for the import task
 
         :param parser: the HGT parser for the file
-        :type parser: :class:`gmaltcli.hgt.HgtParser`
+        :type parser: :class:`gmalthgtparser.HgtParser`
         :return: a HGT iterator
         :rtype: iter
         """
