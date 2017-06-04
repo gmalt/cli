@@ -81,7 +81,7 @@ class ManagerFactory(object):
         return sqlalchemy_create_engine(uri, pool_size=pool_size, echo=debug)
 
     def get_manager(self, use_raster=False):
-        return Manager(self.db_driver, use_raster, self.engine.connect(), self.table_name)
+        return Manager(self.db_driver, use_raster, self.engine, self.table_name)
 
 
 class BaseManager(object):
@@ -92,8 +92,8 @@ class BaseManager(object):
 
     .. note:: manager object needs to be accessed using a context manager
 
-    :param connection: a sqlalchemy connection object
-    :type connection: :class:`sqlalchemy.engine.base.Connection `
+    :param engine: a sqlalchemy engine
+    :type engine: :class:`sqlalchemy.engine.base.Engine`
     :param str table_name: the name of the table to store the elevation value
     """
     TYPE = None
@@ -104,19 +104,27 @@ class BaseManager(object):
     VALUE_EXIST_QUERY = None
     VALUE_CREATE_QUERY = None
 
-    def __init__(self, connection, table_name):
-        self.connection = connection
+    def __init__(self, engine, table_name):
+        self.engine = engine
         self.table_name = table_name
+        self.connection = None
 
     def __enter__(self):
+        if not self.connection:
+            self.connection = self.engine.connect()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.connection.close()
+        if self.connection:
+            self.connection.close()
 
-    def _execute(self, query, params=None, method='fetchall'):
+    def _execute(self, connection, query, params=None, method='fetchall'):
         """ Execute the SQL `query` with the binded `params` and call the `method` on the result cursor
 
+        .. warning:: query not executed in a context manager so you have to close the connection outside
+
+        :param connection: a sqlalchemy connection object
+        :type connection: :class:`sqlalchemy.engine.base.Connection`
         :param str query: the SQL query to execute
         :param dict params: dict of values to bind to the query
         :param str method: the method to call on the
@@ -125,13 +133,22 @@ class BaseManager(object):
         """
         params = params or {}
         params.update({'table_name': self.table_name})
+        # print(conn.connection.cursor().mogrify(query.format(**params), params))
+        result = connection.execute(query.format(**params), params)
+        if result.returns_rows:
+            return getattr(result, method)()
+        else:
+            return None
+
+    def execute(self, query, params=None, method='fetchall'):
+        """ Execute the SQL `query` with the binded `params` inside a transaction
+
+        .. note:: the class should be used as a context manager to have a connection opened
+
+        ..seealso:: :func:`gmaltcli.database.BaseManager._execute` for params description
+        """
         with self.connection.begin():
-            # print(self.connection.connection.cursor().mogrify(query.format(**params), params))
-            result = self.connection.execute(query.format(**params), params)
-            if result.returns_rows:
-                return getattr(result, method)()
-            else:
-                return None
+            return self._execute(self.connection, query, params=params, method=method)
 
     def table_exists(self):
         """ Execute the `TABLE_EXISTS_QUERY` query
@@ -139,14 +156,14 @@ class BaseManager(object):
         :return: 1 if table exists else None
         :rtype: int
         """
-        return self._execute(self.TABLE_EXISTS_QUERY, method='scalar')
+        return self.execute(self.TABLE_EXISTS_QUERY, method='scalar')
 
     def create_table(self):
         """ Execute the `TABLE_CREATE_QUERY` query
 
         :return: None
         """
-        return self._execute(self.TABLE_CREATE_QUERY)
+        return self.execute(self.TABLE_CREATE_QUERY)
 
     def prepare_environment(self):
         """ Check if the database is compatible with the chosen format of the elevation data and create the table to
@@ -203,9 +220,9 @@ class BaseManager(object):
             return
 
         params = self.prepare_params(data, parser)
-        value_exists = self._execute(self.VALUE_EXIST_QUERY, params, method='scalar')
+        value_exists = self.execute(self.VALUE_EXIST_QUERY, params, method='scalar')
         if not value_exists:
-            self._execute(self.VALUE_CREATE_QUERY, params, method='scalar')
+            self.execute(self.VALUE_CREATE_QUERY, params, method='scalar')
 
 
 class PostgresValueManager(with_metaclass(ManagerRegistry, BaseManager)):
@@ -295,7 +312,7 @@ class PostgresRasterManager(with_metaclass(ManagerRegistry, BaseManager)):
         :return: 1 if the extension is activated else None
         :rtype: int or None
         """
-        return self._execute(self.POSTGIS_AVAILABLE_QUERY, method='scalar')
+        return self.execute(self.POSTGIS_AVAILABLE_QUERY, method='scalar')
 
     def prepare_params(self, data, parser):
         """

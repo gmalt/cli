@@ -18,14 +18,16 @@ def test_manager_registry_get_manager_class():
 
 
 def test_manager_constructor():
-    postgres_standard = database.Manager('postgres', False, 'connection', 'table_name')
+    postgres_standard = database.Manager('postgres', False, 'engine', 'table_name')
     assert isinstance(postgres_standard, database.PostgresValueManager)
-    assert postgres_standard.connection == 'connection'
+    assert postgres_standard.engine == 'engine'
+    assert postgres_standard.connection is None
     assert postgres_standard.table_name == 'table_name'
 
-    postgres_raster = database.Manager('postgres', True, 'connection', 'table_name')
+    postgres_raster = database.Manager('postgres', True, 'engine', 'table_name')
     assert isinstance(postgres_raster, database.PostgresRasterManager)
-    assert postgres_raster.connection == 'connection'
+    assert postgres_raster.engine == 'engine'
+    assert postgres_raster.connection is None
     assert postgres_raster.table_name == 'table_name'
 
 
@@ -49,25 +51,50 @@ def test_manager_factory_constructor():
 
 
 def test_manager_factory_get_manager(monkeypatch):
-    def mockreturn(*args, **kwargs):
-        return 'connection'
-    monkeypatch.setattr(sqlalchemy.engine.Engine, 'connect', mockreturn)
-
     factory = database.ManagerFactory('postgres', 'table_name')
     postgres_standard = factory.get_manager(use_raster=False)
     assert isinstance(postgres_standard, database.PostgresValueManager)
-    assert postgres_standard.connection == 'connection'
+    assert isinstance(postgres_standard.engine, sqlalchemy.engine.Engine)
+    assert postgres_standard.connection is None
     assert postgres_standard.table_name == 'table_name'
 
     postgres_raster = factory.get_manager(use_raster=True)
     assert isinstance(postgres_raster, database.PostgresRasterManager)
-    assert postgres_raster.connection == 'connection'
+    assert isinstance(postgres_raster.engine, sqlalchemy.engine.Engine)
+    assert postgres_raster.connection is None
     assert postgres_raster.table_name == 'table_name'
 
     with pytest.raises(Exception) as e:
         factory = database.ManagerFactory('couchdb', 'table_name')
         factory.get_manager()
     assert str(e.value) == "Can't load plugin: sqlalchemy.dialects:couchdb"
+
+
+def test_manager_context_manager(monkeypatch):
+    class MockConnection(object):
+        def __init__(self):
+            self.close_called = False
+
+        def close(self):
+            self.close_called = True
+
+    def mockreturn(*args, **kwargs):
+        return MockConnection()
+    monkeypatch.setattr(sqlalchemy.engine.Engine, 'connect', mockreturn)
+
+    factory = database.ManagerFactory('postgres', 'table_name')
+
+    postgres_standard = factory.get_manager(use_raster=False)
+    with postgres_standard:
+        assert postgres_standard.connection.close_called is False
+        assert isinstance(postgres_standard.connection, MockConnection)
+    assert postgres_standard.connection.close_called is True
+
+    postgres_raster = factory.get_manager(use_raster=True)
+    with postgres_raster:
+        assert postgres_raster.connection.close_called is False
+        assert isinstance(postgres_raster.connection, MockConnection)
+    assert postgres_raster.connection.close_called is True
 
 
 def test_base_manager_prepare_environment_not_compatible(monkeypatch):
