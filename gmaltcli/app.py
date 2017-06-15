@@ -212,5 +212,9 @@ def load_hgt():
                       exc_info=traceback)
     except database.NotSupportedException:
         logging.error('Database does not support raster settings. Have you enabled GIS extension ?', exc_info=traceback)
+    except (KeyboardInterrupt, worker.WorkerPoolException):
+        # in case of ThreadPoolException, the worker which raised the error
+        # logs it using logging.exception
+        pass
     except Exception as e:
         logging.error('Unknown error : {}'.format(str(e)), exc_info=traceback)
