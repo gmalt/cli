@@ -28,7 +28,7 @@ After installation, the commands should be available:
 Local in a virtualenv
 ---------------------
 
-This is the recommanded way to install because the CLI is a one time usage. You download and load the elevation data and that's it.
+This is the recommended way to install because the CLI is a one time usage. You download and load the elevation data and that's it.
 
 Clone the repository, create and activate a virtualenv then install dependencies :
 
