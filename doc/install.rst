@@ -1,6 +1,7 @@
 gmalt CLI - Installation
 ========================
 
+
 Global from PyPI
 ----------------
 
@@ -23,6 +24,7 @@ After installation, the commands should be available:
     $ which gmalt-hgtload
     /usr/bin/gmalt-hgtload
 
+
 Local in a virtualenv
 ---------------------
 
@@ -38,7 +40,7 @@ Clone the repository, create and activate a virtualenv then install dependencies
     $ . venv/bin/activate
     $ python setup.py develop
 
-the commands should be available:
+the CLI commands should be available:
 
 .. code-block:: console
 

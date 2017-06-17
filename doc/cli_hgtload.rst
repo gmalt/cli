@@ -1,6 +1,7 @@
 gmalt CLI - gmalt-hgtload
 =========================
 
+
 Introduction
 ------------
 
@@ -14,6 +15,7 @@ Elevation data can be loaded in 2 formats :
 For now, it supports only ``postgresql`` but adding other database support should be straightforward.
 
 .. note:: the command has only been tested with SRTM3 dataset.
+
 
 Usage
 -----
@@ -40,6 +42,7 @@ The command takes 12 options :
 And takes one positional argument :
 
 - ``folder`` : the folder where the HGT unziped raw files are stored
+
 
 Standard format and example
 ---------------------------
@@ -113,6 +116,7 @@ You can execute :
     2017-06-15 22:10:41,962 - INFO - ImportWorker 3 stopped
     2017-06-15 22:10:42,250 - DEBUG - Import end
 
+
 Raster format and example
 -------------------------
 
@@ -133,6 +137,14 @@ This is the output of such a table ``elevation`` with the ``PostGIS`` extension 
     Indexes:
         "elevation_pkey" PRIMARY KEY, btree (rid)
         "elevation_rast_gist_idx" gist (st_convexhull(rast))
+
+After importing the elevation data, you can find the elevation value in meter at the latitude 48.8566 and the longitude 2.3522 by using this kind of query :
+
+.. code-block::
+
+    SELECT ST_Value(rast, 1, ST_SetSRID(ST_Point(2.3522, 48.8566), 4326))
+    FROM   elevation
+    WHERE  ST_Intersects(rast, ST_SetSRID(ST_Point(2.3522, 48.8566), 4326));
 
 As an example, I am going to suppose you have run `gmalt-hgtget <https://github.com/gmalt/cli/blob/master/doc/cli_hgtget.rst>`_ in a ``path/to/downloaded/hgt/files``.
 You have a PostgreSQL server available at the IP ``172.16.0.5`` and a user ``gmalt`` with the password ``gmalt`` with read/write permissions on an existing ``gmalt`` database where the PostGIS extension is enabled.
@@ -173,6 +185,7 @@ You can execute :
     ...
     2017-06-15 22:44:10,536 - DEBUG - ImportWorker 3 stopped
     2017-06-15 22:44:10,620 - DEBUG - Import end
+
 
 Troubleshooting
 ---------------

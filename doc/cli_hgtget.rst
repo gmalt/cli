@@ -1,12 +1,14 @@
 gmalt CLI - gmalt-hgtget
 ========================
 
+
 Introduction
 ------------
 
 This command dowloads and extracts SRTM zip files.
 
 .. note:: For now, only SRTM3 dataset is available.
+
 
 Usage
 -----
@@ -26,6 +28,7 @@ are :
     - ``small`` : a subset of SRTM3 for testing purposes
 - ``folder`` : the folder where the HGT zip files will be downloaded and unarchived (or if you have already
 downloaded it, the folder where the HGT zip files are stored to unarchive)
+
 
 Examples
 --------

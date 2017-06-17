@@ -1,12 +1,14 @@
 gmalt CLI - gmalt-hgtread
 =========================
 
+
 Introduction
 ------------
 
 This command allows to read values from HGT files. It works the same way as the standard command from ``GDAL`` : ``gdallocationinfo``
 
 .. note:: the command has only been tested with SRTM3 dataset.
+
 
 Usage
 -----
@@ -22,6 +24,7 @@ It returns :
 - the zero indexed column number of the elevation value in the file
 - the zero indexed line number of the elevation value in the file
 - the elevation value
+
 
 Examples
 --------

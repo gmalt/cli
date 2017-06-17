@@ -4,7 +4,6 @@
 
 import random
 import argparse
-
 import struct
 
 parser = argparse.ArgumentParser(description='Generate some HGT random file for testing purposes')
