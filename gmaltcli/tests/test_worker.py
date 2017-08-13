@@ -180,7 +180,7 @@ class TestDownloadWorker(object):
                                                      stop_event, folder)
 
     def test__secured_download_file_connection_error(self, monkeypatch):
-        def raise_url_error(url, filename):
+        def raise_url_error(url, filename, md5sum=None):
             raise URLError('message')
         monkeypatch.setattr(self.download_worker, '_download_file', raise_url_error)
         monkeypatch.setattr(logging, 'error', lambda x: x)
@@ -188,12 +188,21 @@ class TestDownloadWorker(object):
             self.download_worker._secured_download_file('url', 'filename')
 
     def test__secured_download_file_wrong_url(self, monkeypatch):
-        def raise_url_error(url, filename):
+        def raise_url_error(url, filename, md5sum=None):
             raise HTTPError('message', None, None, None, None)
         monkeypatch.setattr(self.download_worker, '_download_file', raise_url_error)
         monkeypatch.setattr(logging, 'error', lambda x: x)
         with pytest.raises(HTTPError):
             self.download_worker._secured_download_file('url', 'filename')
+
+    def test__secured_download_file_wrong_checksum(self, monkeypatch):
+        def raise_url_error(url, filename, md5sum=None):
+            raise worker.InvalidCheckSumException('checksum exception')
+        monkeypatch.setattr(self.download_worker, '_download_file', raise_url_error)
+        monkeypatch.setattr(logging, 'error', lambda x: x)
+        with pytest.raises(Exception) as e:
+            self.download_worker._secured_download_file('url', 'filename', 'checkcsum')
+        assert 'Unable to download file url. After 3 attempts' in str(e.value)
 
     def test__download_file(self, tmpdir):
         tmp_folder = str(tmpdir.mkdir('gmaltcli'))
@@ -206,6 +215,29 @@ class TestDownloadWorker(object):
         downloaded_path = os.path.join(self.download_worker.folder, 'N00E010.hgt.zip')
         assert os.path.exists(downloaded_path)
         assert os.path.getsize(downloaded_path) == 1743694
+
+    def test__download_file_with_md5sum_check(self, tmpdir):
+        tmp_folder = str(tmpdir.mkdir('gmaltcli'))
+        self.download_worker.folder = tmp_folder
+
+        self.download_worker._download_file(
+            'http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E010.hgt.zip',
+            'N00E010.hgt.zip',
+            'dfb52a9b9eae6de945bd2cfbbacdbc7f')
+
+        downloaded_path = os.path.join(self.download_worker.folder, 'N00E010.hgt.zip')
+        assert os.path.exists(downloaded_path)
+        assert os.path.getsize(downloaded_path) == 1743694
+
+    def test__download_file_with_wrong_md5sum_check(self, tmpdir):
+        tmp_folder = str(tmpdir.mkdir('gmaltcli'))
+        self.download_worker.folder = tmp_folder
+
+        with pytest.raises(worker.InvalidCheckSumException) as e:
+            self.download_worker._download_file(
+                'http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E010.hgt.zip',
+                'N00E010.hgt.zip',
+                'abcdefgh')
 
 
 class TestExtractWorker(object):

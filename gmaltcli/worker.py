@@ -241,7 +241,7 @@ class DownloadWorker(Worker):
         self._secured_download_file(queue_item['url'], queue_item['zip'], queue_item.get('md5', None))
         self._log_debug('downloaded %s', (queue_item['url'],))
 
-    def _secured_download_file(self, url, filename, md5sum, attempt=1):
+    def _secured_download_file(self, url, filename, md5sum=None, attempt=1):
         """ Download a file and stores it in `folder`
 
         .. note:: the download is delegated to method :meth:`worker.DownloadWorker._download_file`.
@@ -272,7 +272,7 @@ class DownloadWorker(Worker):
             logging.error('Unable to download file {}'.format(url))
             raise
 
-    def _download_file(self, url, filename, md5sum):
+    def _download_file(self, url, filename, md5sum=None):
         """ Download a file and stores it in `folder`
 
         :param str url: the url to download
