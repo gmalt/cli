@@ -1,14 +1,17 @@
 {
     "N00E006.hgt": {
         "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E006.hgt.zip",
-        "zip": "N00E006.hgt.zip"
+        "zip": "N00E006.hgt.zip",
+        "md5": "36169e88ed072a2a28e4920935ebf918"
     },
     "N00E009.hgt": {
         "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E009.hgt.zip",
-        "zip": "N00E009.hgt.zip"
+        "zip": "N00E009.hgt.zip",
+        "md5": "3a9fea70c2ae49c3260cf69d1f75ff46"
     },
     "N00E010.hgt": {
-      "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E010.hgt.zip",
-      "zip": "N00E010.hgt.zip"
+        "url": "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E010.hgt.zip",
+        "zip": "N00E010.hgt.zip",
+        "md5": "dfb52a9b9eae6de945bd2cfbbacdbc7f"
     }
 }

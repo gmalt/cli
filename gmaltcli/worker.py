@@ -4,6 +4,7 @@ import threading
 import logging
 import time
 import zipfile
+import hashlib
 
 try:
     # Python 3
@@ -221,51 +222,89 @@ class Worker(threading.Thread):
         self._log(logging.INFO, message, params, prefix)
 
 
+class InvalidCheckSumException(Exception):
+    """ Raised after downloading a file if the md5 checksum is invalid """
+    pass
+
+
 class DownloadWorker(Worker):
     """ Worker in charge of downloading zip file into `folder` """
 
     def __init__(self, id_, queue_obj, counter, stop_event, folder):
         super(DownloadWorker, self).__init__(id_, queue_obj, counter, stop_event)
         self.folder = folder
+        self.max_attempt = 3
 
     def process(self, queue_item, counter_info):
         self._log_debug('downloading %s', (queue_item['url'],))
         self._log_info('Downloading file %d/%d', counter_info, prefix='download')
-        self._secured_download_file(queue_item['url'], queue_item['zip'])
+        self._secured_download_file(queue_item['url'], queue_item['zip'], queue_item.get('md5', None))
         self._log_debug('downloaded %s', (queue_item['url'],))
 
-    def _secured_download_file(self, url, filename):
+    def _secured_download_file(self, url, filename, md5sum, attempt=1):
         """ Download a file and stores it in `folder`
 
         .. note:: the download is delegated to method :meth:`worker.DownloadWorker._download_file`.
-            This method is just a wrapper to catch exception from :mod:`urllib`
+            This method is just a wrapper to catch errors from :mod:`urllib`
 
         :param str url: the url to download
         :param str filename: the name of the file created
+        :param str md5sum: the md5sum of the file to validate download
+        :param int attempt: the number of times we retried to download the file
         """
+        if attempt > self.max_attempt:
+            raise Exception('Unable to download file {}. After {} attempts'.format(url, attempt - 1))
+        if attempt > 1:
+            self._log_debug('retrying download file %s. Attempt %i', (url, attempt))
+
         try:
-            self._download_file(url, filename)
+            self._download_file(url, filename, md5sum)
+        except InvalidCheckSumException:
+            logging.error('Unable to download file {}. Checksum does not match'.format(url))
+            self._secured_download_file(url, filename, md5sum, attempt+1)
         except URLError:
             logging.error('Unable to download file {}. Verify your internet connection'.format(url))
             raise
         except HTTPError:
             logging.error('Unable to download file {}. Verify the link.'.format(url))
             raise
+        except:
+            logging.error('Unable to download file {}'.format(url))
+            raise
 
-    def _download_file(self, url, filename):
+    def _download_file(self, url, filename, md5sum):
         """ Download a file and stores it in `folder`
 
         :param str url: the url to download
         :param str filename: the name of the file created
+        :param str md5sum: the md5sum of the file to validate download
         """
         hgt_zip_file = urlopen(url)
-        with open(os.path.join(self.folder, filename), 'wb') as output:
+        file_fullpath = os.path.join(self.folder, filename)
+        with open(file_fullpath, 'wb+') as output:
             while True:
                 data = hgt_zip_file.read(4096)
                 if data and not self.stop_event.is_set():
                     output.write(data)
                 else:
                     break
+        if md5sum:
+            self._validate_downloaded_file(file_fullpath, md5sum)
+
+    @staticmethod
+    def _validate_downloaded_file(filepath, md5sum):
+        """ Validate the md5 checksum of a file
+
+        :param str filepath: the absolute path of the file
+        :param str md5sum: the md5 checksum it should have
+        :raise InvalidCheckSumException: if the calculated md5 checksum
+            does not match the one in the arguments
+        """
+        with open(filepath, 'rb') as fp:
+            md5digest = hashlib.md5(fp.read()).hexdigest()
+            if md5sum != md5digest:
+                raise InvalidCheckSumException(
+                    'File {} md5 checksum does not match {}'.format(filepath, md5sum))
 
 
 class ExtractWorker(Worker):
