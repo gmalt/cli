@@ -233,7 +233,7 @@ class TestDownloadWorker(object):
         tmp_folder = str(tmpdir.mkdir('gmaltcli'))
         self.download_worker.folder = tmp_folder
 
-        with pytest.raises(worker.InvalidCheckSumException) as e:
+        with pytest.raises(worker.InvalidCheckSumException):
             self.download_worker._download_file(
                 'http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E010.hgt.zip',
                 'N00E010.hgt.zip',
