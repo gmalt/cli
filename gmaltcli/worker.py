@@ -278,8 +278,20 @@ class ExtractWorker(Worker):
     def process(self, queue_item, counter_info):
         self._log_debug('extracting %s', (queue_item,))
         self._log_info('Extracting file %d/%d' % counter_info, prefix='extract')
-        self._extract_file(queue_item)
+        self._secured_extract_file(queue_item)
         self._log_debug('extracted %s', (queue_item,))
+
+    def _secured_extract_file(self, filename):
+        """ Extract a zip file in `folder`
+        and logs any error
+
+        :param str filename: the name of the file to extract
+        """
+        try:
+            self._extract_file(filename)
+        except:
+            logging.error('Unable to unzip file {}'.format(filename))
+            raise
 
     def _extract_file(self, filename):
         """ Extract a zip file in `folder`
