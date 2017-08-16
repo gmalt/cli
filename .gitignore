@@ -94,6 +94,7 @@ tools/*.json
 
 # tmp working dir
 tmp
+gmaltcli/datasets/tests.json
 
 # IDE
 .idea

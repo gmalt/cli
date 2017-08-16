@@ -1,9 +1,10 @@
 import os
-
 import logging
-import pytest
+import zipfile
 import time
 import threading
+
+import pytest
 
 try:
     # Python 3
@@ -204,6 +205,15 @@ class TestDownloadWorker(object):
             self.download_worker._secured_download_file('url', 'filename', 'checkcsum')
         assert 'Unable to download file url. After 3 attempts' in str(e.value)
 
+    def test__secured_download_file_wrong_zip_crc(self, monkeypatch):
+        def raise_zip_error(url, filename, md5sum=None):
+            raise zipfile.BadZipfile('bad crc')
+        monkeypatch.setattr(self.download_worker, '_download_file', raise_zip_error)
+        monkeypatch.setattr(logging, 'error', lambda x: x)
+        with pytest.raises(Exception) as e:
+            self.download_worker._secured_download_file('url', 'filename', 'checkcsum')
+        assert 'Unable to download file url. After 3 attempts' in str(e.value)
+
     def test__download_file(self, tmpdir):
         tmp_folder = str(tmpdir.mkdir('gmaltcli'))
         self.download_worker.folder = tmp_folder
@@ -238,6 +248,18 @@ class TestDownloadWorker(object):
                 'http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E010.hgt.zip',
                 'N00E010.hgt.zip',
                 'abcdefgh')
+
+    def test__download_file_with_wrong_crc_check(self, tmpdir, monkeypatch):
+        monkeypatch.setattr(zipfile.ZipFile, 'testzip', lambda x: 'bad crc filename')
+
+        tmp_folder = str(tmpdir.mkdir('gmaltcli'))
+        self.download_worker.folder = tmp_folder
+
+        with pytest.raises(zipfile.BadZipfile):
+            self.download_worker._download_file(
+                'http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/Africa/N00E010.hgt.zip',
+                'N00E010.hgt.zip',
+                'dfb52a9b9eae6de945bd2cfbbacdbc7f')
 
 
 class TestExtractWorker(object):

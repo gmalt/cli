@@ -259,8 +259,8 @@ class DownloadWorker(Worker):
 
         try:
             self._download_file(url, filename, md5sum)
-        except InvalidCheckSumException:
-            logging.error('Unable to download file {}. Checksum does not match'.format(url))
+        except (InvalidCheckSumException, zipfile.BadZipfile):
+            logging.error('Unable to download file {}. File not validated.'.format(url))
             self._secured_download_file(url, filename, md5sum, attempt+1)
         except URLError:
             logging.error('Unable to download file {}. Verify your internet connection'.format(url))
@@ -288,23 +288,33 @@ class DownloadWorker(Worker):
                     output.write(data)
                 else:
                     break
+
         if md5sum:
             self._validate_downloaded_file(file_fullpath, md5sum)
 
     @staticmethod
     def _validate_downloaded_file(filepath, md5sum):
-        """ Validate the md5 checksum of a file
+        """ Validate the md5 checksum of a file and check downloaded zip
+        file CRC
 
         :param str filepath: the absolute path of the file
         :param str md5sum: the md5 checksum it should have
         :raise InvalidCheckSumException: if the calculated md5 checksum
             does not match the one in the arguments
+        :raise zipfile.BadZipfile: if the zip file CRC is not valid
         """
+        # First check md5sum
         with open(filepath, 'rb') as fp:
             md5digest = hashlib.md5(fp.read()).hexdigest()
-            if md5sum != md5digest:
-                raise InvalidCheckSumException(
-                    'File {} md5 checksum does not match {}'.format(filepath, md5sum))
+
+        if md5sum != md5digest:
+            raise InvalidCheckSumException(
+                'File {} md5 checksum does not match {}'.format(filepath, md5sum))
+
+        # Then check zip file
+        with zipfile.ZipFile(filepath) as zip_fd:
+            if zip_fd.testzip():
+                raise zipfile.BadZipfile('Bad CRC on zipfile {}'.format(filepath))
 
 
 class ExtractWorker(Worker):
