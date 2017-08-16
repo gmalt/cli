@@ -201,18 +201,18 @@ class TestDownloadWorker(object):
             raise worker.InvalidCheckSumException('checksum exception')
         monkeypatch.setattr(self.download_worker, '_download_file', raise_url_error)
         monkeypatch.setattr(logging, 'error', lambda x: x)
-        with pytest.raises(Exception) as e:
+        with pytest.raises(worker.InvalidCheckSumException) as e:
             self.download_worker._secured_download_file('url', 'filename', 'checkcsum')
-        assert 'Unable to download file url. After 3 attempts' in str(e.value)
+        assert str(e.value) == 'checksum exception'
 
     def test__secured_download_file_wrong_zip_crc(self, monkeypatch):
         def raise_zip_error(url, filename, md5sum=None):
             raise zipfile.BadZipfile('bad crc')
         monkeypatch.setattr(self.download_worker, '_download_file', raise_zip_error)
         monkeypatch.setattr(logging, 'error', lambda x: x)
-        with pytest.raises(Exception) as e:
+        with pytest.raises(zipfile.BadZipfile) as e:
             self.download_worker._secured_download_file('url', 'filename', 'checkcsum')
-        assert 'Unable to download file url. After 3 attempts' in str(e.value)
+        assert str(e.value) == 'bad crc'
 
     def test__download_file(self, tmpdir):
         tmp_folder = str(tmpdir.mkdir('gmaltcli'))

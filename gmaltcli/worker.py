@@ -241,7 +241,7 @@ class DownloadWorker(Worker):
         self._secured_download_file(queue_item['url'], queue_item['zip'], queue_item.get('md5', None))
         self._log_debug('downloaded %s', (queue_item['url'],))
 
-    def _secured_download_file(self, url, filename, md5sum=None, attempt=1):
+    def _secured_download_file(self, url, filename, md5sum=None, attempt=1, exc_error=Exception('not defined')):
         """ Download a file and stores it in `folder`
 
         .. note:: the download is delegated to method :meth:`worker.DownloadWorker._download_file`.
@@ -253,21 +253,22 @@ class DownloadWorker(Worker):
         :param int attempt: the number of times we retried to download the file
         """
         if attempt > self.max_attempt:
-            raise Exception('Unable to download file {}. After {} attempts'.format(url, attempt - 1))
+            logging.error('Unable to download file {}. After {} attempts'.format(url, attempt - 1))
+            raise exc_error
         if attempt > 1:
             self._log_debug('retrying download file %s. Attempt %i', (url, attempt))
 
         try:
             self._download_file(url, filename, md5sum)
-        except (InvalidCheckSumException, zipfile.BadZipfile):
+        except (InvalidCheckSumException, zipfile.BadZipfile) as exc_checksum:
             logging.error('Unable to download file {}. File not validated.'.format(url))
-            self._secured_download_file(url, filename, md5sum, attempt+1)
-        except URLError:
+            self._secured_download_file(url, filename, md5sum, attempt+1, exc_checksum)
+        except URLError as exc_url:
             logging.error('Unable to download file {}. Verify your internet connection'.format(url))
-            raise
-        except HTTPError:
+            self._secured_download_file(url, filename, md5sum, attempt + 1, exc_url)
+        except HTTPError as exc_http:
             logging.error('Unable to download file {}. Verify the link.'.format(url))
-            raise
+            self._secured_download_file(url, filename, md5sum, attempt + 1, exc_http)
         except:
             logging.error('Unable to download file {}'.format(url))
             raise
