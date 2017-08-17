@@ -290,11 +290,9 @@ class DownloadWorker(Worker):
                 else:
                     break
 
-        if md5sum:
-            self._validate_downloaded_file(file_fullpath, md5sum)
+        self._validate_downloaded_file(file_fullpath, md5sum)
 
-    @staticmethod
-    def _validate_downloaded_file(filepath, md5sum):
+    def _validate_downloaded_file(self, filepath, md5sum=None):
         """ Validate the md5 checksum of a file and check downloaded zip
         file CRC
 
@@ -305,15 +303,20 @@ class DownloadWorker(Worker):
         :raise zipfile.BadZipfile: if the zip file CRC is not valid
         """
         # First check md5sum
-        with open(filepath, 'rb') as fp:
-            md5digest = hashlib.md5(fp.read()).hexdigest()
+        if md5sum:
+            with open(filepath, 'rb') as fp:
+                md5digest = hashlib.md5(fp.read()).hexdigest()
 
-        if md5sum != md5digest:
-            raise InvalidCheckSumException(
-                'File {} md5 checksum does not match {}'.format(filepath, md5sum))
+            self._log_debug('Verifying md5 checksum for %s. Expecting %s - found %s',
+                            (filepath, md5sum, md5digest))
+
+            if md5sum != md5digest:
+                raise InvalidCheckSumException(
+                    'File {} md5 checksum does not match {}'.format(filepath, md5sum))
 
         # Then check zip file
         with zipfile.ZipFile(filepath) as zip_fd:
+            self._log_debug('Verifying zip file %s', (filepath,))
             if zip_fd.testzip():
                 raise zipfile.BadZipfile('Bad CRC on zipfile {}'.format(filepath))
 
