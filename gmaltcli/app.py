@@ -50,12 +50,13 @@ def read_from_hgt():
             elev_data = hgt_parser.get_elevation((args.lat, args.lng))
     except Exception as e:
         logging.error(str(e))
-        sys.exit(1)
+        return sys.exit(1)
 
     sys.stdout.write('Report:\n')
     sys.stdout.write('    Location: ({}P,{}L)\n'.format(elev_data[1], elev_data[0]))
     sys.stdout.write('    Band 1:\n')
     sys.stdout.write('        Value: {}\n'.format(elev_data[2]))
+    return sys.exit(0)
 
 
 def create_get_hgt_parser():
@@ -104,12 +105,16 @@ def get_hgt():
                                      skip=args.skip_download)
         # Unzip in folder all HGT zip files found in folder
         tools.extract_hgt_zip_files(args.folder, args.concurrency, skip=args.skip_unzip)
-    except (KeyboardInterrupt, worker.WorkerPoolException):
+    except KeyboardInterrupt:
+        pass
+    except worker.WorkerPoolException:
         # in case of ThreadPoolException, the worker which raised the error
         # logs it using logging.exception
-        pass
+        return sys.exit(1)
     except Exception as exception:
         logging.exception(exception)
+        return sys.exit(1)
+    return sys.exit(0)
 
 
 def create_load_hgt_parser():
@@ -212,9 +217,14 @@ def load_hgt():
                       exc_info=traceback)
     except database.NotSupportedException:
         logging.error('Database does not support raster settings. Have you enabled GIS extension ?', exc_info=traceback)
-    except (KeyboardInterrupt, worker.WorkerPoolException):
+        return sys.exit(1)
+    except KeyboardInterrupt:
+        return sys.exit(0)
+    except worker.WorkerPoolException:
         # in case of ThreadPoolException, the worker which raised the error
         # logs it using logging.exception
-        pass
+        return sys.exit(1)
     except Exception as e:
         logging.error('Unknown error : {}'.format(str(e)), exc_info=traceback)
+        return sys.exit(1)
+    return sys.exit(0)
