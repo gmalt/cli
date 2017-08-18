@@ -280,9 +280,14 @@ class DownloadWorker(Worker):
         :param str filename: the name of the file created
         :param str md5sum: the md5sum of the file to validate download
         """
-        hgt_zip_file = urlopen(url)
         file_fullpath = os.path.join(self.folder, filename)
-        with open(file_fullpath, 'wb', 0) as output:
+
+        if self._file_exists(file_fullpath, md5sum):
+            self._log_debug('file %s exists and is valid at location %s', (filename, file_fullpath))
+            return
+
+        hgt_zip_file = urlopen(url)
+        with open(file_fullpath, 'wb+') as output:
             while True:
                 data = hgt_zip_file.read(4096)
                 if data and not self.stop_event.is_set():
@@ -294,7 +299,29 @@ class DownloadWorker(Worker):
 
         self._validate_downloaded_file(file_fullpath, md5sum)
 
-    def _validate_downloaded_file(self, filepath, md5sum=None):
+    def _file_exists(self, filepath, md5sum):
+        """ Check if a file has already been downloaded. Useful in case of
+        an exception because of multiple download attempt if we restart the
+        script
+
+        .. note:: you need to provide md5 checksum to fully validate the
+            existence
+
+        :param str filepath: the absolute path of the file
+        :param str md5sum: the md5 checksum it should have
+        :return: True if the file exists and is a valid zip
+        :rtype: bool
+        """
+        try:
+            if not os.path.isfile(filepath):
+                return False
+            self._validate_downloaded_file(filepath, md5sum)
+        except:
+            return False
+
+        return True
+
+    def _validate_downloaded_file(self, filepath, md5sum):
         """ Validate the md5 checksum of a file and check downloaded zip
         file CRC
 
@@ -318,7 +345,6 @@ class DownloadWorker(Worker):
 
         # Then check zip file
         with zipfile.ZipFile(filepath) as zip_fd:
-            self._log_debug('Verifying zip file %s', (filepath,))
             if zip_fd.testzip():
                 raise zipfile.BadZipfile('Bad CRC on zipfile {}'.format(filepath))
 
