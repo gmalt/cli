@@ -282,12 +282,14 @@ class DownloadWorker(Worker):
         """
         hgt_zip_file = urlopen(url)
         file_fullpath = os.path.join(self.folder, filename)
-        with open(file_fullpath, 'wb+') as output:
+        with open(file_fullpath, 'wb', 0) as output:
             while True:
                 data = hgt_zip_file.read(4096)
                 if data and not self.stop_event.is_set():
                     output.write(data)
                 else:
+                    output.flush()
+                    os.fsync(output.fileno())
                     break
 
         self._validate_downloaded_file(file_fullpath, md5sum)
